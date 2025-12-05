@@ -1,20 +1,61 @@
 #!/usr/bin/env node
-import * as cdk from 'aws-cdk-lib';
-import { CdkStack } from '../lib/cdk-stack';
+import "source-map-support/register";
+import * as cdk from "aws-cdk-lib";
+import { StorageStack } from "../lib/stacks/storage-stack";
+import { LambdaStack } from "../lib/stacks/lambda-stack";
+import { StepFunctionsStack } from "../lib/stacks/stepfunctions-stack";
 
 const app = new cdk.App();
-new CdkStack(app, 'CdkStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+// Get environment from context or default to 'dev'
+const environment = app.node.tryGetContext("environment") || "dev";
 
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
+// Common props
+const env = {
+  account: process.env.CDK_DEFAULT_ACCOUNT,
+  region: process.env.CDK_DEFAULT_REGION || "ap-northeast-1",
+};
 
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+// Storage Stack
+const storageStack = new StorageStack(app, `EkTranscriptStorage-${environment}`, {
+  env,
+  environment,
+  description: "S3 buckets and Secrets Manager for ek-transcript",
 });
+
+// Lambda Stack
+const lambdaStack = new LambdaStack(app, `EkTranscriptLambda-${environment}`, {
+  env,
+  environment,
+  inputBucket: storageStack.inputBucket,
+  outputBucket: storageStack.outputBucket,
+  openaiSecret: storageStack.openaiSecret,
+  huggingfaceSecret: storageStack.huggingfaceSecret,
+  description: "Lambda functions for ek-transcript pipeline",
+});
+lambdaStack.addDependency(storageStack);
+
+// Step Functions Stack
+const stepFunctionsStack = new StepFunctionsStack(
+  app,
+  `EkTranscriptStepFunctions-${environment}`,
+  {
+    env,
+    environment,
+    inputBucket: storageStack.inputBucket,
+    outputBucket: storageStack.outputBucket,
+    extractAudioFn: lambdaStack.extractAudioFn,
+    diarizeFn: lambdaStack.diarizeFn,
+    splitBySpeakerFn: lambdaStack.splitBySpeakerFn,
+    transcribeFn: lambdaStack.transcribeFn,
+    aggregateResultsFn: lambdaStack.aggregateResultsFn,
+    llmAnalysisFn: lambdaStack.llmAnalysisFn,
+    description: "Step Functions state machine for ek-transcript pipeline",
+  }
+);
+stepFunctionsStack.addDependency(lambdaStack);
+
+// Tags
+cdk.Tags.of(app).add("Project", "ek-transcript");
+cdk.Tags.of(app).add("Environment", environment);
+cdk.Tags.of(app).add("ManagedBy", "CDK");
