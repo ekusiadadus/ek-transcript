@@ -204,13 +204,15 @@ def handle_chunk_input(event: dict[str, Any]) -> dict[str, Any]:
         # 話者分離を実行
         logger.info("Running speaker diarization...")
         pipeline = get_pipeline()
-        diarization = pipeline({"waveform": audio_tensor, "sample_rate": sample_rate})
+        diarization_output = pipeline({"waveform": audio_tensor, "sample_rate": sample_rate})
 
-        # セグメントを抽出
+        # セグメントを抽出 (pyannote.audio 4.x API)
+        # 4.x では DiarizeOutput オブジェクトが返され、Annotation は speaker_diarization 属性に格納
+        annotation = diarization_output.speaker_diarization
         segments = []
         speakers = set()
 
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
+        for turn, _, speaker in annotation.itertracks(yield_label=True):
             segments.append({
                 "local_start": turn.start,
                 "local_end": turn.end,
@@ -295,12 +297,13 @@ def handle_legacy_input(event: dict[str, Any]) -> dict[str, Any]:
         # 話者分離を実行（waveform 辞書形式で渡す）
         logger.info("Running speaker diarization...")
         pipeline = get_pipeline()
-        diarization = pipeline({"waveform": audio_tensor, "sample_rate": sample_rate})
+        diarization_output = pipeline({"waveform": audio_tensor, "sample_rate": sample_rate})
 
-        # セグメントを抽出
+        # セグメントを抽出 (pyannote.audio 4.x API)
+        annotation = diarization_output.speaker_diarization
         segments = []
         speakers = set()
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
+        for turn, _, speaker in annotation.itertracks(yield_label=True):
             segments.append(
                 {
                     "start": turn.start,
