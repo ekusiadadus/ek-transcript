@@ -1,19 +1,13 @@
 """
 pytest 共通設定とフィクスチャ
+
+各Lambda関数のテストは、それぞれのディレクトリ内の conftest.py でパスを設定
 """
 
 import os
-import sys
-from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
-
-# lambdas ディレクトリをパスに追加
-LAMBDAS_DIR = Path(__file__).parent.parent / "lambdas"
-for lambda_dir in LAMBDAS_DIR.iterdir():
-    if lambda_dir.is_dir() and not lambda_dir.name.startswith("_"):
-        sys.path.insert(0, str(lambda_dir))
 
 
 @pytest.fixture(autouse=True)

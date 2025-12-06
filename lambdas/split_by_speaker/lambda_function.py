@@ -2,6 +2,7 @@
 SplitBySpeaker Lambda Function
 
 話者分離結果に基づいて音声ファイルをセグメントに分割する。
+ffmpeg-python を使用（pydub の audioop 依存を回避）
 """
 
 import json
@@ -10,7 +11,7 @@ import os
 from typing import Any
 
 import boto3
-from pydub import AudioSegment
+import ffmpeg
 
 # ロガー設定
 logger = logging.getLogger()
@@ -21,6 +22,37 @@ s3 = boto3.client("s3")
 
 # 環境変数
 OUTPUT_BUCKET = os.environ.get("OUTPUT_BUCKET", "")
+
+
+def split_audio(
+    input_path: str, output_path: str, start_sec: float, duration_sec: float
+) -> None:
+    """
+    音声ファイルから指定区間を切り出す
+
+    Args:
+        input_path: 入力音声ファイルのパス
+        output_path: 出力音声ファイルのパス
+        start_sec: 開始時間（秒）
+        duration_sec: 長さ（秒）
+
+    Raises:
+        FileNotFoundError: 入力ファイルが存在しない場合
+        ffmpeg.Error: ffmpeg 処理でエラーが発生した場合
+    """
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    try:
+        (
+            ffmpeg.input(input_path, ss=start_sec, t=duration_sec)
+            .output(output_path, acodec="pcm_s16le", ar="16000", ac=1)
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+    except ffmpeg.Error as e:
+        logger.error(f"ffmpeg error: {e.stderr.decode() if e.stderr else str(e)}")
+        raise
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -60,9 +92,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         logger.info(f"Processing {len(segments)} segments")
 
-        # 音声を読み込み
-        audio = AudioSegment.from_wav(local_audio)
-
         # 出力バケットを決定
         output_bucket = OUTPUT_BUCKET if OUTPUT_BUCKET else bucket
 
@@ -71,16 +100,16 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         segment_files = []
         for i, seg in enumerate(segments):
-            start_ms = int(seg["start"] * 1000)
-            end_ms = int(seg["end"] * 1000)
+            start_sec = seg["start"]
+            end_sec = seg["end"]
+            duration_sec = end_sec - start_sec
             speaker = seg["speaker"]
 
-            # セグメントを切り出し
-            clip = audio[start_ms:end_ms]
-
-            # ローカルに保存
+            # ローカルパスを生成
             local_path = f"{local_segment_prefix}{i:04d}.wav"
-            clip.export(local_path, format="wav")
+
+            # セグメントを切り出し
+            split_audio(local_audio, local_path, start_sec, duration_sec)
 
             # S3 にアップロード
             segment_key = f"segments/{base_key}_{i:04d}_{speaker}.wav"

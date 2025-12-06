@@ -33,7 +33,7 @@ def get_hf_token() -> str:
         raise ValueError("HF_TOKEN_SECRET_ARN environment variable not set")
 
     secret = secrets_client.get_secret_value(SecretId=HF_TOKEN_SECRET_ARN)
-    secret_data = json.loads(secret["SecretString"])
+    secret_data: dict[str, str] = json.loads(secret["SecretString"])
     return secret_data.get("token", secret_data.get("HF_TOKEN", ""))
 
 
@@ -47,8 +47,8 @@ def get_pipeline() -> Any:
         logger.info("Initializing pyannote pipeline...")
         hf_token = get_hf_token()
         _pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1",
-            use_auth_token=hf_token,
+            "pyannote/speaker-diarization-community-1",
+            token=hf_token,
         )
         logger.info("Pipeline initialized")
 
