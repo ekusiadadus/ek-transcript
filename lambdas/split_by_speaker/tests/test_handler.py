@@ -45,13 +45,11 @@ class TestSplitBySpeaker:
             yield mock
 
     @pytest.fixture
-    def mock_ffmpeg(self) -> Generator[MagicMock, None, None]:
-        """ffmpeg のモック"""
-        with patch.object(lambda_module, "ffmpeg") as mock:
-            # ffmpeg チェーンのモック
-            mock.input.return_value.output.return_value.overwrite_output.return_value.run.return_value = (
-                None
-            )
+    def mock_subprocess(self) -> Generator[MagicMock, None, None]:
+        """subprocess.run のモック"""
+        with patch.object(lambda_module.subprocess, "run") as mock:
+            # 成功を返すモック
+            mock.return_value = MagicMock(returncode=0, stderr="")
             yield mock
 
     @pytest.fixture
@@ -62,7 +60,7 @@ class TestSplitBySpeaker:
                 yield None
 
     def test_lambda_handler_success(
-        self, mock_s3: MagicMock, mock_ffmpeg: MagicMock, mock_os: None
+        self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
     ) -> None:
         """正常系: 音声分割が成功すること"""
         event = {
@@ -79,7 +77,7 @@ class TestSplitBySpeaker:
         assert len(result["segment_files"]) == 2
 
     def test_lambda_handler_empty_segments(
-        self, mock_s3: MagicMock, mock_ffmpeg: MagicMock, mock_os: None
+        self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
     ) -> None:
         """空のセグメントリストでも正常に動作すること"""
         mock_s3.get_object.return_value = {
@@ -98,7 +96,7 @@ class TestSplitBySpeaker:
         assert result["segment_files"] == []
 
     def test_lambda_handler_segment_files_have_correct_format(
-        self, mock_s3: MagicMock, mock_ffmpeg: MagicMock, mock_os: None
+        self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
     ) -> None:
         """セグメントファイルが正しい形式で返されること"""
         event = {
@@ -120,9 +118,25 @@ class TestSplitBySpeaker:
         assert seg["end"] == 5.0
 
     def test_split_audio_calls_ffmpeg_correctly(
-        self, mock_ffmpeg: MagicMock, mock_os: None
+        self, mock_subprocess: MagicMock, tmp_path: Path
     ) -> None:
         """split_audio が ffmpeg を正しく呼び出すこと"""
-        lambda_module.split_audio("/tmp/input.wav", "/tmp/output.wav", 5.0, 10.0)
+        input_path = str(tmp_path / "input.wav")
+        output_path = str(tmp_path / "output.wav")
+        Path(input_path).touch()
 
-        mock_ffmpeg.input.assert_called_once_with("/tmp/input.wav", ss=5.0, t=10.0)
+        lambda_module.split_audio(input_path, output_path, 5.0, 10.0)
+
+        # subprocess.run が呼び出されたことを確認
+        mock_subprocess.assert_called_once()
+        call_args = mock_subprocess.call_args[0][0]
+
+        # ffmpeg コマンドの確認
+        assert call_args[0] == "ffmpeg"
+        assert "-ss" in call_args
+        assert "5.0" in call_args
+        assert "-t" in call_args
+        assert "10.0" in call_args
+        assert "-i" in call_args
+        assert input_path in call_args
+        assert output_path in call_args

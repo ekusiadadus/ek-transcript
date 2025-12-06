@@ -6,10 +6,10 @@ ExtractAudio Lambda Function
 
 import logging
 import os
+import subprocess
 from typing import Any
 
 import boto3
-import ffmpeg
 
 # ロガー設定
 logger = logging.getLogger()
@@ -34,29 +34,30 @@ def extract_audio(input_path: str, output_path: str) -> None:
 
     Raises:
         FileNotFoundError: 入力ファイルが存在しない場合
-        ffmpeg.Error: ffmpeg 処理でエラーが発生した場合
+        RuntimeError: ffmpeg 処理でエラーが発生した場合
     """
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
     logger.info(f"Extracting audio from {input_path} to {output_path}")
 
-    try:
-        (
-            ffmpeg.input(input_path)
-            .output(
-                output_path,
-                ac=CHANNELS,  # モノラル
-                ar=str(SAMPLE_RATE),  # 16kHz
-                acodec="pcm_s16le",  # 16-bit PCM
-            )
-            .overwrite_output()
-            .run(capture_stdout=True, capture_stderr=True)
-        )
-        logger.info(f"Audio extraction completed: {output_path}")
-    except ffmpeg.Error as e:
-        logger.error(f"ffmpeg error: {e.stderr.decode() if e.stderr else str(e)}")
-        raise
+    cmd = [
+        "ffmpeg",
+        "-i", input_path,
+        "-ac", str(CHANNELS),       # モノラル
+        "-ar", str(SAMPLE_RATE),    # 16kHz
+        "-acodec", "pcm_s16le",     # 16-bit PCM
+        "-y",                        # 上書き
+        output_path,
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        logger.error(f"ffmpeg error: {result.stderr}")
+        raise RuntimeError(f"ffmpeg error: {result.stderr}")
+
+    logger.info(f"Audio extraction completed: {output_path}")
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:

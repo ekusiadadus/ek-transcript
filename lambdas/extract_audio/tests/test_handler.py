@@ -68,13 +68,11 @@ class TestLambdaHandler:
             yield mock
 
     @pytest.fixture
-    def mock_ffmpeg(self) -> Generator[MagicMock, None, None]:
-        """ffmpeg のモック"""
-        with patch.object(lambda_module, "ffmpeg") as mock:
-            # ffmpeg チェーンのモック
-            mock.input.return_value.output.return_value.overwrite_output.return_value.run.return_value = (
-                None
-            )
+    def mock_subprocess(self) -> Generator[MagicMock, None, None]:
+        """subprocess.run のモック"""
+        with patch.object(lambda_module.subprocess, "run") as mock:
+            # 成功を返すモック
+            mock.return_value = MagicMock(returncode=0, stderr="")
             yield mock
 
     @pytest.fixture
@@ -85,7 +83,7 @@ class TestLambdaHandler:
                 yield None
 
     def test_lambda_handler_success(
-        self, mock_s3: MagicMock, mock_ffmpeg: MagicMock, mock_os_exists: None
+        self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os_exists: None
     ) -> None:
         """正常系: S3からダウンロード→処理→S3アップロードが成功すること"""
         # Given
@@ -122,7 +120,7 @@ class TestLambdaHandler:
             lambda_module.lambda_handler(event, context)
 
     def test_lambda_handler_returns_correct_output_key(
-        self, mock_s3: MagicMock, mock_ffmpeg: MagicMock, mock_os_exists: None
+        self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os_exists: None
     ) -> None:
         """出力キーが正しい形式であること"""
         event = {
@@ -135,6 +133,30 @@ class TestLambdaHandler:
 
         # processed/ プレフィックスが付き、拡張子が .wav に変わる
         assert result["audio_key"] == "processed/videos/meeting_2024.wav"
+
+    def test_extract_audio_calls_ffmpeg_correctly(
+        self, mock_subprocess: MagicMock, tmp_path: Path
+    ) -> None:
+        """ffmpeg が正しいオプションで呼び出されること"""
+        input_path = str(tmp_path / "input.mp4")
+        output_path = str(tmp_path / "output.wav")
+        Path(input_path).touch()
+
+        lambda_module.extract_audio(input_path, output_path)
+
+        # subprocess.run が呼び出されたことを確認
+        mock_subprocess.assert_called_once()
+        call_args = mock_subprocess.call_args[0][0]
+
+        # ffmpeg コマンドの確認
+        assert call_args[0] == "ffmpeg"
+        assert "-i" in call_args
+        assert input_path in call_args
+        assert output_path in call_args
+        assert "-ac" in call_args
+        assert "1" in call_args  # モノラル
+        assert "-ar" in call_args
+        assert "16000" in call_args  # 16kHz
 
 
 class TestIntegration:

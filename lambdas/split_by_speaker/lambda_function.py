@@ -2,16 +2,16 @@
 SplitBySpeaker Lambda Function
 
 話者分離結果に基づいて音声ファイルをセグメントに分割する。
-ffmpeg-python を使用（pydub の audioop 依存を回避）
+subprocess で ffmpeg を直接呼び出し（外部ライブラリ依存なし）
 """
 
 import json
 import logging
 import os
+import subprocess
 from typing import Any
 
 import boto3
-import ffmpeg
 
 # ロガー設定
 logger = logging.getLogger()
@@ -38,21 +38,28 @@ def split_audio(
 
     Raises:
         FileNotFoundError: 入力ファイルが存在しない場合
-        ffmpeg.Error: ffmpeg 処理でエラーが発生した場合
+        RuntimeError: ffmpeg 処理でエラーが発生した場合
     """
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    try:
-        (
-            ffmpeg.input(input_path, ss=start_sec, t=duration_sec)
-            .output(output_path, acodec="pcm_s16le", ar="16000", ac=1)
-            .overwrite_output()
-            .run(capture_stdout=True, capture_stderr=True)
-        )
-    except ffmpeg.Error as e:
-        logger.error(f"ffmpeg error: {e.stderr.decode() if e.stderr else str(e)}")
-        raise
+    cmd = [
+        "ffmpeg",
+        "-ss", str(start_sec),
+        "-t", str(duration_sec),
+        "-i", input_path,
+        "-acodec", "pcm_s16le",
+        "-ar", "16000",
+        "-ac", "1",
+        "-y",
+        output_path,
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        logger.error(f"ffmpeg error: {result.stderr}")
+        raise RuntimeError(f"ffmpeg error: {result.stderr}")
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
