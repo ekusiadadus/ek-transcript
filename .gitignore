@@ -304,3 +304,4 @@ secrets.json
 
 # Docker
 *.tar
+test-assets/*
