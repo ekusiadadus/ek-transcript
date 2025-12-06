@@ -1,0 +1,1 @@
+# MergeSpeakers Lambda tests
