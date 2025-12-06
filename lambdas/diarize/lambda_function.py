@@ -12,6 +12,8 @@ import os
 from typing import Any
 
 import boto3
+import soundfile as sf
+import torch
 
 # ロガー設定
 logger = logging.getLogger()
@@ -40,14 +42,20 @@ def get_hf_token() -> str:
 
 
 def get_pipeline() -> Any:
-    """pyannote パイプラインを取得（シングルトン）"""
+    """pyannote パイプラインを取得（シングルトン）- プリダウンロード済みモデル使用"""
     global _pipeline
 
     if _pipeline is None:
+        from pyannote.audio.core.task import Specifications, Problem, Resolution
+        from pyannote.audio.core.model import Introspection
         from pyannote.audio import Pipeline
 
-        logger.info("Initializing pyannote pipeline...")
+        # PyTorch 2.6+ requires explicit safe_globals for pyannote models
+        torch.serialization.add_safe_globals([Specifications, Problem, Resolution, Introspection])
+
+        logger.info("Initializing pyannote pipeline from pre-downloaded model...")
         hf_token = get_hf_token()
+        # モデルは /opt/huggingface にプリダウンロード済み
         _pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-community-1",
             token=hf_token,
@@ -86,10 +94,21 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         logger.info(f"Downloading s3://{bucket}/{audio_key}")
         s3.download_file(bucket, audio_key, local_audio)
 
-        # 話者分離を実行
+        # soundfile で音声を読み込み（torchcodec をバイパス）
+        logger.info("Loading audio with soundfile...")
+        waveform, sample_rate = sf.read(local_audio, dtype="float32")
+        # (samples,) -> (1, samples) の形式に変換
+        if waveform.ndim == 1:
+            waveform = waveform.reshape(1, -1)
+        else:
+            # ステレオの場合はモノラルに変換
+            waveform = waveform.mean(axis=1).reshape(1, -1)
+        audio_tensor = torch.from_numpy(waveform)
+
+        # 話者分離を実行（waveform 辞書形式で渡す）
         logger.info("Running speaker diarization...")
         pipeline = get_pipeline()
-        diarization = pipeline(local_audio)
+        diarization = pipeline({"waveform": audio_tensor, "sample_rate": sample_rate})
 
         # セグメントを抽出
         segments = []

@@ -73,10 +73,17 @@ export class LambdaStack extends cdk.Stack {
     );
 
     // Diarize Lambda (larger memory for pyannote)
+    // HF_TOKEN is required at build time - set via environment variable
+    const hfToken = process.env.HF_TOKEN || "";
     this.diarizeFn = new lambda.DockerImageFunction(this, "DiarizeFn", {
       functionName: `ek-transcript-diarize-${environment}`,
       code: lambda.DockerImageCode.fromImageAsset(
-        path.join(lambdasPath, "diarize")
+        path.join(lambdasPath, "diarize"),
+        {
+          buildArgs: {
+            HF_TOKEN: hfToken,
+          },
+        }
       ),
       memorySize: 10240, // Max Lambda memory for pyannote
       timeout: cdk.Duration.minutes(15),
@@ -85,6 +92,7 @@ export class LambdaStack extends cdk.Stack {
         INPUT_BUCKET: inputBucket.bucketName,
         OUTPUT_BUCKET: outputBucket.bucketName,
         HF_TOKEN_SECRET_ARN: huggingfaceSecret.secretArn,
+        HF_HOME: "/opt/huggingface", // Pre-downloaded model location
         ENVIRONMENT: environment,
       },
       role: lambdaRole,
@@ -114,18 +122,25 @@ export class LambdaStack extends cdk.Stack {
       }
     );
 
-    // Transcribe Lambda
+    // Transcribe Lambda - model pre-downloaded in Docker image
+    const whisperModel = "medium";
     this.transcribeFn = new lambda.DockerImageFunction(this, "TranscribeFn", {
       functionName: `ek-transcript-transcribe-${environment}`,
       code: lambda.DockerImageCode.fromImageAsset(
-        path.join(lambdasPath, "transcribe")
+        path.join(lambdasPath, "transcribe"),
+        {
+          buildArgs: {
+            WHISPER_MODEL: whisperModel,
+          },
+        }
       ),
       memorySize: 6144, // For faster-whisper medium model
       timeout: cdk.Duration.minutes(15),
       environment: {
         INPUT_BUCKET: inputBucket.bucketName,
         OUTPUT_BUCKET: outputBucket.bucketName,
-        WHISPER_MODEL: "medium",
+        WHISPER_MODEL: whisperModel,
+        WHISPER_MODEL_DIR: "/opt/whisper-models", // Pre-downloaded model location
         ENVIRONMENT: environment,
       },
       role: lambdaRole,

@@ -21,25 +21,27 @@ s3 = boto3.client("s3")
 
 # 環境変数
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "medium")
+WHISPER_MODEL_DIR = os.environ.get("WHISPER_MODEL_DIR", "/opt/whisper-models")
 
 # グローバル変数（コールドスタート対策）
 _model = None
 
 
 def get_model() -> Any:
-    """Whisper モデルを取得（シングルトン）"""
+    """Whisper モデルを取得（シングルトン）- プリダウンロード済みモデル使用"""
     global _model
 
     if _model is None:
         from faster_whisper import WhisperModel
 
-        logger.info(f"Loading Whisper model: {WHISPER_MODEL}")
+        logger.info(f"Loading Whisper model: {WHISPER_MODEL} from {WHISPER_MODEL_DIR}")
         _model = WhisperModel(
             WHISPER_MODEL,
             device="cpu",
             compute_type="int8",
+            download_root=WHISPER_MODEL_DIR,
         )
-        logger.info("Model loaded")
+        logger.info("Model loaded from pre-downloaded cache")
 
     return _model
 
