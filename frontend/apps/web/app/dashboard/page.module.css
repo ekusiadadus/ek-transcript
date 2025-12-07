@@ -96,15 +96,20 @@
 }
 
 .interviewCard {
+  display: block;
   border: 1px solid var(--gray-alpha-200);
   border-radius: 12px;
   padding: 20px;
   background: var(--gray-alpha-100);
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .interviewCard:hover {
   background: var(--gray-alpha-200);
+  border-color: var(--foreground);
 }
 
 .cardHeader {

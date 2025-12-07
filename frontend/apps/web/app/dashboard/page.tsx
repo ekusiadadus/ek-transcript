@@ -180,7 +180,11 @@ function InterviewList() {
   return (
     <div className={styles.interviewList}>
       {interviews.map((interview) => (
-        <div key={interview.interview_id} className={styles.interviewCard}>
+        <Link
+          key={interview.interview_id}
+          href={`/interview/${interview.interview_id}`}
+          className={styles.interviewCard}
+        >
           <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>
               Interview {interview.interview_id.substring(0, 8)}
@@ -193,7 +197,7 @@ function InterviewList() {
           {interview.total_score !== null && (
             <span className={styles.score}>Score: {interview.total_score}</span>
           )}
-        </div>
+        </Link>
       ))}
     </div>
   );
