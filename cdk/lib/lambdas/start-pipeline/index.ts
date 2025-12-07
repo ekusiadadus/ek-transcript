@@ -1,7 +1,11 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
 
 const sfnClient = new SFNClient({});
+const dynamoClient = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 const VIDEO_EXTENSIONS = [".mp4", ".mov", ".avi", ".webm", ".mkv"];
 
@@ -95,9 +99,14 @@ function extractS3Info(event: PipelineEvent): Array<{ bucket: string; key: strin
 
 export async function handler(event: PipelineEvent): Promise<StartPipelineResponse> {
   const stateMachineArn = process.env.STATE_MACHINE_ARN;
+  const tableName = process.env.TABLE_NAME;
 
   if (!stateMachineArn) {
     throw new Error("STATE_MACHINE_ARN environment variable is not set");
+  }
+
+  if (!tableName) {
+    throw new Error("TABLE_NAME environment variable is not set");
   }
 
   const results: string[] = [];
@@ -113,6 +122,7 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
 
     const { userId, date, segment, fileName } = parseS3Key(key);
     const interviewId = randomUUID();
+    const createdAt = new Date().toISOString();
 
     const input = {
       interview_id: interviewId,
@@ -123,9 +133,10 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
       file_name: fileName,
       file_size: size,
       upload_date: date,
-      created_at: new Date().toISOString(),
+      created_at: createdAt,
     };
 
+    // Start Step Functions execution
     const command = new StartExecutionCommand({
       stateMachineArn: stateMachineArn,
       name: `interview-${interviewId}`,
@@ -133,6 +144,24 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
     });
 
     const response = await sfnClient.send(command);
+
+    // Save interview record to DynamoDB
+    await docClient.send(new PutCommand({
+      TableName: tableName,
+      Item: {
+        interview_id: interviewId,
+        user_id: userId,
+        segment: segment,
+        file_name: fileName,
+        file_size: size,
+        video_key: key,
+        bucket: bucket,
+        status: "processing",
+        execution_arn: response.executionArn,
+        created_at: createdAt,
+        updated_at: createdAt,
+      },
+    }));
 
     results.push(
       JSON.stringify({

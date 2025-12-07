@@ -1,14 +1,29 @@
 // Mock AWS SDK - must be before import
-const mockSend = jest.fn().mockResolvedValue({
+const mockSfnSend = jest.fn().mockResolvedValue({
   executionArn: "arn:aws:states:ap-northeast-1:123456789012:execution:test-state-machine:test-execution",
   startDate: new Date(),
 });
 
+const mockDynamoSend = jest.fn().mockResolvedValue({});
+
 jest.mock("@aws-sdk/client-sfn", () => ({
   SFNClient: jest.fn().mockImplementation(() => ({
-    send: mockSend,
+    send: mockSfnSend,
   })),
   StartExecutionCommand: jest.fn(),
+}));
+
+jest.mock("@aws-sdk/client-dynamodb", () => ({
+  DynamoDBClient: jest.fn().mockImplementation(() => ({})),
+}));
+
+jest.mock("@aws-sdk/lib-dynamodb", () => ({
+  DynamoDBDocumentClient: {
+    from: jest.fn().mockImplementation(() => ({
+      send: mockDynamoSend,
+    })),
+  },
+  PutCommand: jest.fn(),
 }));
 
 import { handler } from "../lib/lambdas/start-pipeline";
@@ -21,6 +36,7 @@ describe("Start Pipeline Lambda", () => {
     jest.clearAllMocks();
     process.env = { ...OLD_ENV };
     process.env.STATE_MACHINE_ARN = "arn:aws:states:ap-northeast-1:123456789012:stateMachine:test-state-machine";
+    process.env.TABLE_NAME = "test-interviews-table";
     process.env.AWS_REGION = "ap-northeast-1";
   });
 
@@ -48,7 +64,8 @@ describe("Start Pipeline Lambda", () => {
     const result = await handler(event);
 
     expect(result.statusCode).toBe(200);
-    expect(mockSend).toHaveBeenCalled();
+    expect(mockSfnSend).toHaveBeenCalled();
+    expect(mockDynamoSend).toHaveBeenCalled();
   });
 
   it("should extract user_id and segment from S3 key", async () => {
@@ -138,7 +155,8 @@ describe("Start Pipeline Lambda", () => {
     const result = await handler(event);
 
     expect(result.statusCode).toBe(200);
-    expect(mockSend).toHaveBeenCalled();
+    expect(mockSfnSend).toHaveBeenCalled();
+    expect(mockDynamoSend).toHaveBeenCalled();
     expect(result.body).toContain("user-789");
   });
 

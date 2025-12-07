@@ -4,6 +4,7 @@ import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -14,6 +15,7 @@ export interface StepFunctionsStackProps extends cdk.StackProps {
   environment: string;
   inputBucket: s3.IBucket;
   outputBucket: s3.IBucket;
+  interviewsTable: dynamodb.ITable;
   extractAudioFn: lambda.IFunction;
   chunkAudioFn: lambda.IFunction;
   diarizeFn: lambda.IFunction;
@@ -34,6 +36,7 @@ export class StepFunctionsStack extends cdk.Stack {
       environment,
       inputBucket,
       outputBucket,
+      interviewsTable,
       extractAudioFn,
       chunkAudioFn,
       diarizeFn,
@@ -275,6 +278,7 @@ export class StepFunctionsStack extends cdk.Stack {
         handler: "handler",
         environment: {
           STATE_MACHINE_ARN: this.stateMachine.stateMachineArn,
+          TABLE_NAME: interviewsTable.tableName,
         },
         timeout: cdk.Duration.seconds(30),
         memorySize: 256,
@@ -286,8 +290,9 @@ export class StepFunctionsStack extends cdk.Stack {
       }
     );
 
-    // Grant Lambda permission to start Step Functions
+    // Grant Lambda permissions
     this.stateMachine.grantStartExecution(startPipelineLambda);
+    interviewsTable.grantWriteData(startPipelineLambda);
 
     // EventBridge rule to trigger Lambda on S3 video upload (avoids circular dependency)
     const s3UploadRule = new events.Rule(this, "S3UploadRule", {

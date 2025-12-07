@@ -47,6 +47,7 @@ const stepFunctionsStack = new StepFunctionsStack(
     environment,
     inputBucket: storageStack.inputBucket,
     outputBucket: storageStack.outputBucket,
+    interviewsTable: storageStack.interviewsTable,
     extractAudioFn: lambdaStack.extractAudioFn,
     chunkAudioFn: lambdaStack.chunkAudioFn,
     diarizeFn: lambdaStack.diarizeFn,
@@ -59,6 +60,7 @@ const stepFunctionsStack = new StepFunctionsStack(
   }
 );
 stepFunctionsStack.addDependency(lambdaStack);
+stepFunctionsStack.addDependency(storageStack);
 
 // Auth Stack (Cognito User Pool)
 const authStack = new AuthStack(app, `EkTranscriptAuth-${environment}`, {
