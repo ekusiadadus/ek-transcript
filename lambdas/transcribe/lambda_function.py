@@ -3,9 +3,11 @@ Transcribe Lambda Function
 
 faster-whisper を使用して音声セグメントを文字起こしする。
 
-Version: 2.0 - Python 3.12 compatible
+Version: 3.0 - States.DataLimitExceeded対策
+- 結果をS3に保存し、キーのみ返す（ペイロード削減）
 """
 
+import json
 import logging
 import os
 from typing import Any
@@ -61,11 +63,13 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         context: Lambda コンテキスト
 
     Returns:
-        処理結果
+        処理結果（ペイロード削減のためメタデータのみ）
+            - bucket: S3 バケット名
+            - result_key: 結果ファイルのS3キー
             - speaker: 話者ID
             - start: 開始時刻
             - end: 終了時刻
-            - text: 文字起こしテキスト
+        ※ textはS3に保存（States.DataLimitExceeded対策）
     """
     logger.info(f"Event: {event}")
 
@@ -97,11 +101,33 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         text = "".join([seg.text for seg in segments])
         logger.info(f"Transcription: {text[:100]}...")
 
-        return {
+        # 結果をS3に保存（States.DataLimitExceeded対策）
+        # セグメントキーから結果キーを生成
+        segment_name = segment_key.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        result_key = f"transcribe_results/{segment_name}.json"
+
+        result_data = {
             "speaker": speaker,
             "start": start,
             "end": end,
             "text": text,
+        }
+
+        logger.info(f"Saving result to s3://{bucket}/{result_key}")
+        s3.put_object(
+            Bucket=bucket,
+            Key=result_key,
+            Body=json.dumps(result_data, ensure_ascii=False),
+            ContentType="application/json",
+        )
+
+        # Step Functionsにはメタデータとキーのみ返す（ペイロード削減）
+        return {
+            "bucket": bucket,
+            "result_key": result_key,
+            "speaker": speaker,
+            "start": start,
+            "end": end,
         }
 
     finally:

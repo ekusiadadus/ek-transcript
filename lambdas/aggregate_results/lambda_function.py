@@ -3,7 +3,8 @@ AggregateResults Lambda Function
 
 文字起こし結果を統合して1つのJSONファイルにまとめる。
 
-Version: 2.0 - Python 3.12 compatible
+Version: 3.0 - States.DataLimitExceeded対策
+- S3から各結果ファイルを読み込んで統合
 """
 
 import json
@@ -31,7 +32,8 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     Args:
         event: Lambda イベント
             - bucket: S3 バケット名
-            - transcription_results: 文字起こし結果のリスト
+            - transcription_results: 文字起こし結果のメタデータリスト
+                各要素: {result_key, speaker, start, end}
             - audio_key: 元の音声ファイルのキー
         context: Lambda コンテキスト
 
@@ -39,15 +41,44 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         処理結果
             - bucket: 出力バケット名
             - transcript_key: 統合された文字起こしファイルのキー
+            - segment_count: 処理したセグメント数
     """
-    logger.info(f"Event: {event}")
+    logger.info(f"Event keys: {list(event.keys())}")
 
     bucket = event["bucket"]
     transcription_results = event["transcription_results"]
     audio_key = event.get("audio_key", "unknown")
 
+    logger.info(f"Loading {len(transcription_results)} transcription results from S3")
+
+    # S3から各結果ファイルを読み込み（States.DataLimitExceeded対策）
+    full_results = []
+    for i, result_meta in enumerate(transcription_results):
+        result_key = result_meta["result_key"]
+        result_bucket = result_meta.get("bucket", bucket)
+
+        try:
+            response = s3.get_object(Bucket=result_bucket, Key=result_key)
+            result_data = json.loads(response["Body"].read().decode("utf-8"))
+            full_results.append(result_data)
+
+            if i % 100 == 0:
+                logger.info(f"Loaded {i + 1}/{len(transcription_results)} results")
+
+        except Exception as e:
+            logger.error(f"Failed to load {result_key}: {e}")
+            # メタデータから最低限の情報を復元
+            full_results.append({
+                "speaker": result_meta.get("speaker", "UNKNOWN"),
+                "start": result_meta.get("start", 0),
+                "end": result_meta.get("end", 0),
+                "text": "[読み込みエラー]",
+            })
+
+    logger.info(f"Loaded all {len(full_results)} results")
+
     # 時系列でソート
-    sorted_results = sorted(transcription_results, key=lambda x: x["start"])
+    sorted_results = sorted(full_results, key=lambda x: x["start"])
 
     logger.info(f"Aggregating {len(sorted_results)} transcription results")
 
