@@ -1,4 +1,5 @@
 import * as cdk from "aws-cdk-lib";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -13,6 +14,7 @@ export interface LambdaStackProps extends cdk.StackProps {
   outputBucket: s3.IBucket;
   openaiSecret: secretsmanager.ISecret;
   huggingfaceSecret: secretsmanager.ISecret;
+  interviewsTable: dynamodb.ITable;
 }
 
 export class LambdaStack extends cdk.Stack {
@@ -34,6 +36,7 @@ export class LambdaStack extends cdk.Stack {
       outputBucket,
       openaiSecret,
       huggingfaceSecret,
+      interviewsTable,
     } = props;
 
     const lambdasPath = path.join(__dirname, "../../../lambdas");
@@ -231,11 +234,13 @@ export class LambdaStack extends cdk.Stack {
         OPENAI_SECRET_ARN: openaiSecret.secretArn,
         OPENAI_MODEL: "gpt-5-mini",
         ENVIRONMENT: environment,
+        INTERVIEWS_TABLE_NAME: interviewsTable.tableName,
       },
       role: lambdaRole,
       architecture: lambda.Architecture.X86_64,
     });
     openaiSecret.grantRead(this.llmAnalysisFn);
+    interviewsTable.grantWriteData(this.llmAnalysisFn);
 
     // Outputs
     new cdk.CfnOutput(this, "ExtractAudioFnArn", {

@@ -10,6 +10,7 @@ Version: 3.0 - Structured Outputs 対応
 import json
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 import boto3
@@ -25,11 +26,13 @@ logger.setLevel(logging.INFO)
 # AWS クライアント
 s3 = boto3.client("s3")
 secrets_client = boto3.client("secretsmanager")
+dynamodb = boto3.client("dynamodb")
 
 # 環境変数
 OUTPUT_BUCKET = os.environ.get("OUTPUT_BUCKET", "")
 OPENAI_SECRET_ARN = os.environ.get("OPENAI_SECRET_ARN", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-mini")
+INTERVIEWS_TABLE_NAME = os.environ.get("INTERVIEWS_TABLE_NAME", "")
 
 # グローバル変数（コールドスタート対策）
 _openai_client = None
@@ -180,6 +183,49 @@ def analyze_transcript_text(transcript: list[dict], prompt: str) -> str:
     return response.choices[0].message.content or ""
 
 
+def save_to_dynamodb(
+    interview_id: str,
+    segment: str,
+    analysis_key: str,
+    transcript_key: str,
+    video_key: str | None = None,
+    diarization_key: str | None = None,
+) -> None:
+    """
+    分析結果を DynamoDB に保存
+
+    Args:
+        interview_id: インタビュー ID
+        segment: セグメント (A/B/C/D)
+        analysis_key: 分析結果の S3 キー
+        transcript_key: 文字起こしファイルの S3 キー
+        video_key: 動画ファイルの S3 キー（オプション）
+        diarization_key: 話者分離ファイルの S3 キー（オプション）
+    """
+    if not INTERVIEWS_TABLE_NAME:
+        logger.info("INTERVIEWS_TABLE_NAME not configured, skipping DynamoDB save")
+        return
+
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    item: dict[str, Any] = {
+        "interview_id": {"S": interview_id},
+        "segment": {"S": segment},
+        "created_at": {"S": created_at},
+        "analysis_key": {"S": analysis_key},
+        "transcript_key": {"S": transcript_key},
+    }
+
+    if video_key:
+        item["video_key"] = {"S": video_key}
+    if diarization_key:
+        item["diarization_key"] = {"S": diarization_key}
+
+    logger.info(f"Saving to DynamoDB table {INTERVIEWS_TABLE_NAME}: interview_id={interview_id}")
+    dynamodb.put_item(TableName=INTERVIEWS_TABLE_NAME, Item=item)
+    logger.info("Successfully saved to DynamoDB")
+
+
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     Lambda ハンドラー
@@ -204,6 +250,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     transcript_key = event["transcript_key"]
     prompt = event.get("prompt", DEFAULT_PROMPT)
     use_structured = event.get("structured", True)  # デフォルトで構造化出力を使用
+
+    # DynamoDB 保存用のオプションパラメータ
+    interview_id = event.get("interview_id")
+    video_key = event.get("video_key")
+    diarization_key = event.get("diarization_key")
 
     # S3 から文字起こしを取得
     logger.info(f"Getting transcript from s3://{bucket}/{transcript_key}")
@@ -231,6 +282,17 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             Body=json_content.encode("utf-8"),
             ContentType="application/json; charset=utf-8",
         )
+
+        # DynamoDB に保存（interview_id が指定されている場合）
+        if interview_id:
+            save_to_dynamodb(
+                interview_id=interview_id,
+                segment=structured_data.scoring.segment,
+                analysis_key=analysis_key,
+                transcript_key=transcript_key,
+                video_key=video_key,
+                diarization_key=diarization_key,
+            )
 
         return {
             "bucket": output_bucket,

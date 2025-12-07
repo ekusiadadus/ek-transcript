@@ -1,4 +1,5 @@
 import * as cdk from "aws-cdk-lib";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
@@ -12,6 +13,7 @@ export class StorageStack extends cdk.Stack {
   public readonly outputBucket: s3.Bucket;
   public readonly openaiSecret: secretsmanager.ISecret;
   public readonly huggingfaceSecret: secretsmanager.ISecret;
+  public readonly interviewsTable: dynamodb.Table;
 
   constructor(scope: Construct, id: string, props: StorageStackProps) {
     super(scope, id, props);
@@ -88,6 +90,36 @@ export class StorageStack extends cdk.Stack {
       }
     );
 
+    // DynamoDB table for interview data
+    this.interviewsTable = new dynamodb.Table(this, "InterviewsTable", {
+      tableName: `ek-transcript-interviews-${environment}`,
+      partitionKey: {
+        name: "interview_id",
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy:
+        environment === "prod"
+          ? cdk.RemovalPolicy.RETAIN
+          : cdk.RemovalPolicy.DESTROY,
+      timeToLiveAttribute: "expires_at",
+      pointInTimeRecovery: environment === "prod",
+    });
+
+    // GSI for segment-based queries
+    this.interviewsTable.addGlobalSecondaryIndex({
+      indexName: "segment-index",
+      partitionKey: {
+        name: "segment",
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: "created_at",
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // Outputs
     new cdk.CfnOutput(this, "InputBucketName", {
       value: this.inputBucket.bucketName,
@@ -107,6 +139,16 @@ export class StorageStack extends cdk.Stack {
     new cdk.CfnOutput(this, "HuggingFaceSecretArn", {
       value: this.huggingfaceSecret.secretArn,
       exportName: `${id}-HuggingFaceSecretArn`,
+    });
+
+    new cdk.CfnOutput(this, "InterviewsTableName", {
+      value: this.interviewsTable.tableName,
+      exportName: `${id}-InterviewsTableName`,
+    });
+
+    new cdk.CfnOutput(this, "InterviewsTableArn", {
+      value: this.interviewsTable.tableArn,
+      exportName: `${id}-InterviewsTableArn`,
     });
   }
 }

@@ -31,6 +31,7 @@ const lambdaStack = new LambdaStack(app, `EkTranscriptLambda-${environment}`, {
   outputBucket: storageStack.outputBucket,
   openaiSecret: storageStack.openaiSecret,
   huggingfaceSecret: storageStack.huggingfaceSecret,
+  interviewsTable: storageStack.interviewsTable,
   description: "Lambda functions for ek-transcript pipeline",
 });
 lambdaStack.addDependency(storageStack);
