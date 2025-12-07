@@ -18,6 +18,12 @@ type InterviewConnection @aws_cognito_user_pools {
   nextToken: String
 }
 
+type UploadUrlResponse @aws_cognito_user_pools {
+  uploadUrl: String!
+  key: String!
+  expiresIn: Int!
+}
+
 type Query {
   # 単一インタビュー取得
   getInterview(interview_id: ID!): Interview
@@ -33,6 +39,14 @@ type Query {
     limit: Int
     nextToken: String
   ): InterviewConnection
+    @aws_cognito_user_pools
+
+  # S3アップロード用Presigned URL取得
+  getUploadUrl(
+    fileName: String!
+    contentType: String
+    segment: String
+  ): UploadUrlResponse
     @aws_cognito_user_pools
 }
 

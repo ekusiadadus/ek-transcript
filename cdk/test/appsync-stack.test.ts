@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import { AppSyncStack } from "../lib/stacks/appsync-stack";
 
@@ -12,6 +13,7 @@ describe("AppSyncStack", () => {
   // Mock dependencies
   let mockUserPool: cognito.IUserPool;
   let mockInterviewsTable: dynamodb.ITable;
+  let mockInputBucket: s3.IBucket;
 
   beforeEach(() => {
     app = new cdk.App();
@@ -30,10 +32,15 @@ describe("AppSyncStack", () => {
       partitionKey: { name: "interview_id", type: dynamodb.AttributeType.STRING },
     });
 
+    mockInputBucket = new s3.Bucket(prereqStack, "MockInputBucket", {
+      bucketName: "test-input-bucket",
+    });
+
     stack = new AppSyncStack(app, "TestAppSyncStack", {
       environment: "test",
       userPool: mockUserPool,
       interviewsTable: mockInterviewsTable,
+      inputBucket: mockInputBucket,
       env: { account: "123456789012", region: "ap-northeast-1" },
     });
 
@@ -84,6 +91,21 @@ describe("AppSyncStack", () => {
         Type: "AMAZON_DYNAMODB",
       });
     });
+
+    test("creates Lambda data source for Presigned URL", () => {
+      template.hasResourceProperties("AWS::AppSync::DataSource", {
+        Type: "AWS_LAMBDA",
+      });
+    });
+  });
+
+  describe("Presigned URL Lambda", () => {
+    test("creates Presigned URL Lambda function", () => {
+      template.hasResourceProperties("AWS::Lambda::Function", {
+        FunctionName: "ek-transcript-presigned-url-test",
+        Runtime: "nodejs20.x",
+      });
+    });
   });
 
   describe("Resolvers", () => {
@@ -105,6 +127,13 @@ describe("AppSyncStack", () => {
       template.hasResourceProperties("AWS::AppSync::Resolver", {
         TypeName: "Query",
         FieldName: "listInterviewsBySegment",
+      });
+    });
+
+    test("creates resolver for getUploadUrl query", () => {
+      template.hasResourceProperties("AWS::AppSync::Resolver", {
+        TypeName: "Query",
+        FieldName: "getUploadUrl",
       });
     });
   });

@@ -10,8 +10,10 @@ import type {
   UpdateInterviewInput,
   UpdateInterviewResponse,
   DeleteInterviewResponse,
+  UploadUrlResponse,
+  GetUploadUrlResponse,
 } from "./types";
-import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT } from "./queries";
+import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT, GET_UPLOAD_URL } from "./queries";
 import { UPDATE_INTERVIEW, DELETE_INTERVIEW } from "./mutations";
 
 const client = generateClient();
@@ -71,4 +73,19 @@ export async function deleteInterview(interviewId: string): Promise<Interview> {
     throw new Error("Failed to delete interview");
   }
   return response.data.deleteInterview;
+}
+
+export async function getUploadUrl(
+  fileName: string,
+  contentType?: string,
+  segment?: string
+): Promise<UploadUrlResponse> {
+  const response = await client.graphql({
+    query: GET_UPLOAD_URL,
+    variables: { fileName, contentType, segment },
+  }) as GraphQLResult<GetUploadUrlResponse>;
+  if (!response.data?.getUploadUrl) {
+    throw new Error("Failed to get upload URL");
+  }
+  return response.data.getUploadUrl;
 }

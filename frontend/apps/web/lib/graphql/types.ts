@@ -55,3 +55,13 @@ export interface UpdateInterviewResponse {
 export interface DeleteInterviewResponse {
   deleteInterview: Interview;
 }
+
+export interface UploadUrlResponse {
+  uploadUrl: string;
+  key: string;
+  expiresIn: number;
+}
+
+export interface GetUploadUrlResponse {
+  getUploadUrl: UploadUrlResponse;
+}
