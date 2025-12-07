@@ -45,6 +45,28 @@
   opacity: 0.7;
 }
 
+.uploadLink {
+  appearance: none;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 16px;
+  font-family: var(--font-geist-sans);
+  border: none;
+  background: var(--foreground);
+  color: var(--background);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+}
+
+.uploadLink:hover {
+  opacity: 0.9;
+}
+
 .signOutButton {
   appearance: none;
   border-radius: 8px;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
+import Link from "next/link";
 import { useAuth } from "../../lib/auth-context";
 import { listInterviews, type Interview } from "../../lib/graphql";
 import styles from "./page.module.css";
@@ -218,6 +219,9 @@ export default function DashboardPage() {
       <header className={styles.header}>
         <h1 className={styles.title}>Interview Dashboard</h1>
         <div className={styles.userInfo}>
+          <Link href="/upload" className={styles.uploadLink}>
+            Upload
+          </Link>
           <span className={styles.email}>{user?.email || user?.username}</span>
           <button className={styles.signOutButton} onClick={signOut}>
             Sign Out
