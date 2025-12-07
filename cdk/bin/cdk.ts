@@ -4,6 +4,8 @@ import * as cdk from "aws-cdk-lib";
 import { StorageStack } from "../lib/stacks/storage-stack";
 import { LambdaStack } from "../lib/stacks/lambda-stack";
 import { StepFunctionsStack } from "../lib/stacks/stepfunctions-stack";
+import { AuthStack } from "../lib/stacks/auth-stack";
+import { AppSyncStack } from "../lib/stacks/appsync-stack";
 
 const app = new cdk.App();
 
@@ -57,6 +59,24 @@ const stepFunctionsStack = new StepFunctionsStack(
   }
 );
 stepFunctionsStack.addDependency(lambdaStack);
+
+// Auth Stack (Cognito User Pool)
+const authStack = new AuthStack(app, `EkTranscriptAuth-${environment}`, {
+  env,
+  environment,
+  description: "Cognito User Pool for ek-transcript authentication",
+});
+
+// AppSync Stack (GraphQL + Events API)
+const appSyncStack = new AppSyncStack(app, `EkTranscriptAppSync-${environment}`, {
+  env,
+  environment,
+  userPool: authStack.userPool,
+  interviewsTable: storageStack.interviewsTable,
+  description: "AppSync GraphQL and Events API for ek-transcript",
+});
+appSyncStack.addDependency(authStack);
+appSyncStack.addDependency(storageStack);
 
 // Tags
 cdk.Tags.of(app).add("Project", "ek-transcript");

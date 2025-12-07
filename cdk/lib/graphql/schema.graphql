@@ -1,0 +1,90 @@
+# ek-transcript GraphQL Schema
+# Cognito User Pool 認証必須
+
+type Interview @aws_cognito_user_pools {
+  interview_id: ID!
+  segment: String!
+  created_at: AWSDateTime!
+  analysis_key: String!
+  transcript_key: String!
+  video_key: String
+  diarization_key: String
+  total_score: Int
+  user_id: String
+}
+
+type InterviewConnection @aws_cognito_user_pools {
+  items: [Interview!]!
+  nextToken: String
+}
+
+type Query {
+  # 単一インタビュー取得
+  getInterview(interview_id: ID!): Interview
+    @aws_cognito_user_pools
+
+  # インタビュー一覧取得（ページネーション対応）
+  listInterviews(limit: Int, nextToken: String): InterviewConnection
+    @aws_cognito_user_pools
+
+  # セグメント別インタビュー取得
+  listInterviewsBySegment(
+    segment: String!
+    limit: Int
+    nextToken: String
+  ): InterviewConnection
+    @aws_cognito_user_pools
+}
+
+type Mutation {
+  # インタビュー作成（Step Functions から呼び出し - IAM 認証）
+  createInterview(input: CreateInterviewInput!): Interview
+    @aws_iam
+
+  # インタビュー更新
+  updateInterview(input: UpdateInterviewInput!): Interview
+    @aws_cognito_user_pools
+
+  # インタビュー削除
+  deleteInterview(interview_id: ID!): Interview
+    @aws_cognito_user_pools
+}
+
+input CreateInterviewInput {
+  interview_id: ID!
+  segment: String!
+  analysis_key: String!
+  transcript_key: String!
+  video_key: String
+  diarization_key: String
+  total_score: Int
+  user_id: String
+}
+
+input UpdateInterviewInput {
+  interview_id: ID!
+  segment: String
+  analysis_key: String
+  transcript_key: String
+  video_key: String
+  diarization_key: String
+  total_score: Int
+}
+
+type Subscription {
+  # インタビュー作成イベント購読
+  onCreateInterview: Interview
+    @aws_subscribe(mutations: ["createInterview"])
+    @aws_cognito_user_pools
+
+  # インタビュー更新イベント購読
+  onUpdateInterview: Interview
+    @aws_subscribe(mutations: ["updateInterview"])
+    @aws_cognito_user_pools
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
