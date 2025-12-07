@@ -6,11 +6,26 @@ const mockSfnSend = jest.fn().mockResolvedValue({
 
 const mockDynamoSend = jest.fn().mockResolvedValue({});
 
+const mockS3Send = jest.fn().mockResolvedValue({
+  Metadata: {
+    "original-filename": "my-interview-video.mp4",
+    "user-id": "user-123",
+    "segment": "HEMS",
+  },
+});
+
 jest.mock("@aws-sdk/client-sfn", () => ({
   SFNClient: jest.fn().mockImplementation(() => ({
     send: mockSfnSend,
   })),
   StartExecutionCommand: jest.fn(),
+}));
+
+jest.mock("@aws-sdk/client-s3", () => ({
+  S3Client: jest.fn().mockImplementation(() => ({
+    send: mockS3Send,
+  })),
+  HeadObjectCommand: jest.fn(),
 }));
 
 jest.mock("@aws-sdk/client-dynamodb", () => ({
@@ -32,12 +47,19 @@ describe("Start Pipeline Lambda", () => {
   const OLD_ENV = process.env;
 
   beforeEach(() => {
-    jest.resetModules();
     jest.clearAllMocks();
     process.env = { ...OLD_ENV };
     process.env.STATE_MACHINE_ARN = "arn:aws:states:ap-northeast-1:123456789012:stateMachine:test-state-machine";
     process.env.TABLE_NAME = "test-interviews-table";
     process.env.AWS_REGION = "ap-northeast-1";
+    // Reset S3 mock to return original filename
+    mockS3Send.mockResolvedValue({
+      Metadata: {
+        "original-filename": "my-interview-video.mp4",
+        "user-id": "user-123",
+        "segment": "HEMS",
+      },
+    });
   });
 
   afterAll(() => {
@@ -90,6 +112,35 @@ describe("Start Pipeline Lambda", () => {
     expect(result.statusCode).toBe(200);
     expect(result.body).toContain("user-456");
     expect(result.body).toContain("EV");
+  });
+
+  it("should read original filename from S3 metadata", async () => {
+    mockS3Send.mockResolvedValue({
+      Metadata: {
+        "original-filename": "original-interview-recording.mp4",
+      },
+    });
+
+    const event = {
+      Records: [
+        {
+          s3: {
+            bucket: {
+              name: "test-bucket",
+            },
+            object: {
+              key: "uploads/user-123/2025-12-08/HEMS/uuid-based-name.mp4",
+              size: 1024000,
+            },
+          },
+        },
+      ],
+    };
+
+    const result = await handler(event);
+
+    expect(result.statusCode).toBe(200);
+    expect(mockS3Send).toHaveBeenCalled();
   });
 
   it("should skip non-video files", async () => {

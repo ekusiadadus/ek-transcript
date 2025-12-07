@@ -1,9 +1,11 @@
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
+import { S3Client, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
 
 const sfnClient = new SFNClient({});
+const s3Client = new S3Client({});
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
@@ -120,9 +122,24 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
       continue;
     }
 
-    const { userId, date, segment, fileName } = parseS3Key(key);
+    const { userId, date, segment, fileName: keyFileName } = parseS3Key(key);
     const interviewId = randomUUID();
     const createdAt = new Date().toISOString();
+
+    // Get original filename from S3 metadata
+    let originalFileName = keyFileName;
+    try {
+      const headResponse = await s3Client.send(new HeadObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }));
+      if (headResponse.Metadata?.["original-filename"]) {
+        originalFileName = headResponse.Metadata["original-filename"];
+      }
+    } catch (err) {
+      // If metadata fetch fails, use key-based filename as fallback
+      console.warn(`Failed to get S3 metadata for ${key}:`, err);
+    }
 
     const input = {
       interview_id: interviewId,
@@ -130,7 +147,7 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
       video_key: key,
       user_id: userId,
       segment: segment,
-      file_name: fileName,
+      file_name: originalFileName,
       file_size: size,
       upload_date: date,
       created_at: createdAt,
@@ -152,7 +169,7 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
         interview_id: interviewId,
         user_id: userId,
         segment: segment,
-        file_name: fileName,
+        file_name: originalFileName,
         file_size: size,
         video_key: key,
         bucket: bucket,
