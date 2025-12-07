@@ -2,11 +2,13 @@ import * as cdk from "aws-cdk-lib";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as path from "path";
 import { Construct } from "constructs";
 
 export interface StepFunctionsStackProps extends cdk.StackProps {
@@ -263,9 +265,58 @@ export class StepFunctionsStack extends cdk.Stack {
       },
     });
 
-    // S3 trigger for new video uploads
-    // Note: This requires additional setup - Lambda trigger to start Step Functions
-    // For now, we'll use EventBridge rule
+    // S3 trigger Lambda - starts Step Functions when video is uploaded
+    const startPipelineLambda = new lambdaNodejs.NodejsFunction(
+      this,
+      "StartPipelineLambda",
+      {
+        functionName: `ek-transcript-start-pipeline-${environment}`,
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.join(__dirname, "../lambdas/start-pipeline/index.ts"),
+        handler: "handler",
+        environment: {
+          STATE_MACHINE_ARN: this.stateMachine.stateMachineArn,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          minify: true,
+          sourceMap: false,
+          externalModules: [],
+        },
+      }
+    );
+
+    // Grant Lambda permission to start Step Functions
+    this.stateMachine.grantStartExecution(startPipelineLambda);
+
+    // Add S3 event notification to trigger Lambda on video upload
+    inputBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(startPipelineLambda),
+      {
+        prefix: "uploads/",
+        suffix: ".mp4",
+      }
+    );
+
+    inputBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(startPipelineLambda),
+      {
+        prefix: "uploads/",
+        suffix: ".mov",
+      }
+    );
+
+    inputBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(startPipelineLambda),
+      {
+        prefix: "uploads/",
+        suffix: ".webm",
+      }
+    );
 
     // EventBridge rule for completion notification
     const completionRule = new events.Rule(this, "CompletionRule", {

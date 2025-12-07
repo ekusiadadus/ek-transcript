@@ -6,7 +6,7 @@
     "lib": [
       "es2022"
     ],
-    "declaration": true,
+    "declaration": false,
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -26,6 +26,7 @@
   },
   "exclude": [
     "node_modules",
-    "cdk.out"
+    "cdk.out",
+    "lib/lambdas/**/*.d.ts"
   ]
 }
