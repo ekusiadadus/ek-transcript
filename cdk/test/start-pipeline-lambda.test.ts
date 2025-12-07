@@ -9,7 +9,6 @@ const mockDynamoSend = jest.fn().mockResolvedValue({});
 const mockS3Send = jest.fn().mockResolvedValue({
   Metadata: {
     "original-filename": "my-interview-video.mp4",
-    "user-id": "user-123",
     "segment": "HEMS",
   },
 });
@@ -56,7 +55,6 @@ describe("Start Pipeline Lambda", () => {
     mockS3Send.mockResolvedValue({
       Metadata: {
         "original-filename": "my-interview-video.mp4",
-        "user-id": "user-123",
         "segment": "HEMS",
       },
     });

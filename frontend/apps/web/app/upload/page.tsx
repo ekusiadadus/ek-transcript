@@ -110,6 +110,9 @@ function UploadForm() {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", uploadUrl);
         xhr.setRequestHeader("Content-Type", file.type);
+        // S3メタデータとして元のファイル名を送信（presigned URL署名と一致させる）
+        xhr.setRequestHeader("x-amz-meta-original-filename", file.name);
+        xhr.setRequestHeader("x-amz-meta-segment", segment);
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {

@@ -66,12 +66,13 @@ export async function handler(event: AppSyncEvent): Promise<UploadUrlResponse> {
   }
 
   // Create presigned URL
+  // Note: user-id is not included in metadata because frontend must send
+  // matching headers for signature validation. User ID is captured from S3 key path.
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: key,
     ContentType: contentType,
     Metadata: {
-      "user-id": identity.sub,
       segment: segment,
       "original-filename": fileName,
     },
