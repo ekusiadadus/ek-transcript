@@ -12,8 +12,10 @@ import type {
   DeleteInterviewResponse,
   UploadUrlResponse,
   GetUploadUrlResponse,
+  VideoUrlResponse,
+  GetVideoUrlResponse,
 } from "./types";
-import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT, GET_UPLOAD_URL } from "./queries";
+import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT, GET_UPLOAD_URL, GET_VIDEO_URL } from "./queries";
 import { UPDATE_INTERVIEW, DELETE_INTERVIEW } from "./mutations";
 
 const client = generateClient();
@@ -88,4 +90,15 @@ export async function getUploadUrl(
     throw new Error("Failed to get upload URL");
   }
   return response.data.getUploadUrl;
+}
+
+export async function getVideoUrl(key: string): Promise<VideoUrlResponse> {
+  const response = await client.graphql({
+    query: GET_VIDEO_URL,
+    variables: { key },
+  }) as GraphQLResult<GetVideoUrlResponse>;
+  if (!response.data?.getVideoUrl) {
+    throw new Error("Failed to get video URL");
+  }
+  return response.data.getVideoUrl;
 }

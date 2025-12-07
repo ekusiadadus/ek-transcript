@@ -1,8 +1,9 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "crypto";
 
 const s3Client = new S3Client({});
+const VIDEO_URL_EXPIRATION_SECONDS = 3600; // 1 hour
 
 const ALLOWED_CONTENT_TYPES = [
   "video/mp4",
@@ -84,5 +85,62 @@ export async function handler(event: AppSyncEvent): Promise<UploadUrlResponse> {
     uploadUrl,
     key,
     expiresIn: EXPIRATION_SECONDS,
+  };
+}
+
+// GET Video URL handler
+interface GetVideoUrlEvent {
+  arguments: {
+    key?: string;
+  };
+  identity: {
+    sub?: string;
+    username?: string;
+  } | null;
+}
+
+interface VideoUrlResponse {
+  videoUrl: string;
+  expiresIn: number;
+}
+
+export async function getVideoUrlHandler(event: GetVideoUrlEvent): Promise<VideoUrlResponse> {
+  const { arguments: args, identity } = event;
+
+  // Validate authentication
+  if (!identity?.sub) {
+    throw new Error("Unauthorized");
+  }
+
+  // Validate required fields
+  if (!args.key) {
+    throw new Error("key is required");
+  }
+
+  const { key } = args;
+
+  // Security: Only allow keys in uploads directory
+  if (!key.startsWith("uploads/")) {
+    throw new Error("Invalid key: Access denied");
+  }
+
+  const bucketName = process.env.BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error("BUCKET_NAME environment variable is not set");
+  }
+
+  // Create presigned GET URL
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+  });
+
+  const videoUrl = await getSignedUrl(s3Client, command, {
+    expiresIn: VIDEO_URL_EXPIRATION_SECONDS,
+  });
+
+  return {
+    videoUrl,
+    expiresIn: VIDEO_URL_EXPIRATION_SECONDS,
   };
 }

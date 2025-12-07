@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth-context";
-import { getInterview, type Interview } from "../../../lib/graphql";
+import { getInterview, getVideoUrl, type Interview } from "../../../lib/graphql";
 import styles from "./page.module.css";
 
 type ProcessingStatus = "pending" | "processing" | "completed" | "failed";
@@ -32,9 +32,77 @@ function StatusBadge({ status }: { status: ProcessingStatus }) {
   return <span className={`${styles.statusBadge} ${config.className}`}>{config.label}</span>;
 }
 
+function VideoPlayer({ videoKey }: { videoKey: string }) {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadVideoUrl() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getVideoUrl(videoKey);
+        setVideoUrl(response.videoUrl);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load video");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (videoKey) {
+      loadVideoUrl();
+    }
+  }, [videoKey]);
+
+  if (loading) {
+    return (
+      <div className={styles.videoContainer}>
+        <div className={styles.videoLoading}>Loading video...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.videoContainer}>
+        <div className={styles.videoError}>{error}</div>
+      </div>
+    );
+  }
+
+  if (!videoUrl) {
+    return null;
+  }
+
+  return (
+    <div className={styles.videoContainer}>
+      <video
+        className={styles.videoPlayer}
+        controls
+        preload="metadata"
+        src={videoUrl}
+      >
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  );
+}
+
 function InterviewContent({ interview }: { interview: Interview }) {
   return (
     <div className={styles.content}>
+      {/* Video Player Section */}
+      {interview.video_key && (
+        <div className={styles.videoSection}>
+          <h2 className={styles.sectionTitle}>
+            動画{interview.file_name && ` - ${interview.file_name}`}
+          </h2>
+          <VideoPlayer videoKey={interview.video_key} />
+        </div>
+      )}
+
       <div className={styles.metaSection}>
         <h2 className={styles.sectionTitle}>基本情報</h2>
         <div className={styles.metaGrid}>
@@ -50,6 +118,26 @@ function InterviewContent({ interview }: { interview: Interview }) {
             <span className={styles.metaLabel}>作成日時</span>
             <span className={styles.metaValue}>{formatDate(interview.created_at)}</span>
           </div>
+          {interview.status && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>ステータス</span>
+              <StatusBadge status={interview.status as ProcessingStatus} />
+            </div>
+          )}
+          {interview.file_name && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>ファイル名</span>
+              <span className={styles.metaValue}>{interview.file_name}</span>
+            </div>
+          )}
+          {interview.file_size && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>ファイルサイズ</span>
+              <span className={styles.metaValue}>
+                {(interview.file_size / 1024 / 1024).toFixed(2)} MB
+              </span>
+            </div>
+          )}
           {interview.total_score !== null && interview.total_score !== undefined && (
             <div className={styles.metaItem}>
               <span className={styles.metaLabel}>スコア</span>

@@ -70,3 +70,12 @@ export interface UploadUrlResponse {
 export interface GetUploadUrlResponse {
   getUploadUrl: UploadUrlResponse;
 }
+
+export interface VideoUrlResponse {
+  videoUrl: string;
+  expiresIn: number;
+}
+
+export interface GetVideoUrlResponse {
+  getVideoUrl: VideoUrlResponse;
+}

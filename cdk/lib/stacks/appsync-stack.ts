@@ -24,7 +24,7 @@ export class AppSyncStack extends cdk.Stack {
 
     const { environment, userPool, interviewsTable, inputBucket } = props;
 
-    // Presigned URL Lambda
+    // Presigned URL Lambda (Upload)
     const presignedUrlLambda = new lambdaNodejs.NodejsFunction(
       this,
       "PresignedUrlLambda",
@@ -46,8 +46,33 @@ export class AppSyncStack extends cdk.Stack {
       }
     );
 
-    // Grant S3 permissions
+    // Grant S3 permissions for upload
     inputBucket.grantPut(presignedUrlLambda);
+
+    // Video URL Lambda (Download/Playback)
+    const videoUrlLambda = new lambdaNodejs.NodejsFunction(
+      this,
+      "VideoUrlLambda",
+      {
+        functionName: `ek-transcript-video-url-${environment}`,
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.join(__dirname, "../lambdas/presigned-url/index.ts"),
+        handler: "getVideoUrlHandler",
+        environment: {
+          BUCKET_NAME: inputBucket.bucketName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          minify: true,
+          sourceMap: false,
+          externalModules: [],
+        },
+      }
+    );
+
+    // Grant S3 permissions for read
+    inputBucket.grantRead(videoUrlLambda);
 
     // GraphQL API with Cognito User Pool as default auth
     this.graphqlApi = new appsync.GraphqlApi(this, "GraphqlApi", {
@@ -80,10 +105,16 @@ export class AppSyncStack extends cdk.Stack {
       interviewsTable
     );
 
-    // Lambda Data Source for Presigned URL
+    // Lambda Data Source for Presigned URL (Upload)
     const presignedUrlDataSource = this.graphqlApi.addLambdaDataSource(
       "PresignedUrlDataSource",
       presignedUrlLambda
+    );
+
+    // Lambda Data Source for Video URL (Playback)
+    const videoUrlDataSource = this.graphqlApi.addLambdaDataSource(
+      "VideoUrlDataSource",
+      videoUrlLambda
     );
 
     // Resolvers using JavaScript runtime (2025 best practice)
@@ -163,6 +194,14 @@ export class AppSyncStack extends cdk.Stack {
       typeName: "Query",
       fieldName: "getUploadUrl",
       dataSource: presignedUrlDataSource,
+    });
+
+    // getVideoUrl resolver (Lambda)
+    new appsync.Resolver(this, "GetVideoUrlResolver", {
+      api: this.graphqlApi,
+      typeName: "Query",
+      fieldName: "getVideoUrl",
+      dataSource: videoUrlDataSource,
     });
 
     // Events API for real-time pub/sub (2025 feature)

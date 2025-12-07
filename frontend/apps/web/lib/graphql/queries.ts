@@ -76,3 +76,12 @@ export const GET_UPLOAD_URL = /* GraphQL */ `
     }
   }
 `;
+
+export const GET_VIDEO_URL = /* GraphQL */ `
+  query GetVideoUrl($key: String!) {
+    getVideoUrl(key: $key) {
+      videoUrl
+      expiresIn
+    }
+  }
+`;

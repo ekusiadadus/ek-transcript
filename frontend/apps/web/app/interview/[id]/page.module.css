@@ -261,6 +261,42 @@
   margin: 0;
 }
 
+.videoSection {
+  margin-bottom: 32px;
+}
+
+.videoContainer {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--gray-alpha-100);
+  border: 1px solid var(--gray-alpha-200);
+}
+
+.videoPlayer {
+  width: 100%;
+  display: block;
+  max-height: 450px;
+}
+
+.videoLoading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.videoError {
+  padding: 24px;
+  text-align: center;
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  color: var(--error);
+}
+
 @media (max-width: 600px) {
   .page {
     padding: 16px;

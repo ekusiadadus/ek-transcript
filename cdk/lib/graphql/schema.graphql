@@ -29,6 +29,11 @@ type UploadUrlResponse @aws_cognito_user_pools {
   expiresIn: Int!
 }
 
+type VideoUrlResponse @aws_cognito_user_pools {
+  videoUrl: String!
+  expiresIn: Int!
+}
+
 type Query {
   # 単一インタビュー取得
   getInterview(interview_id: ID!): Interview
@@ -52,6 +57,10 @@ type Query {
     contentType: String
     segment: String
   ): UploadUrlResponse
+    @aws_cognito_user_pools
+
+  # S3動画再生用Presigned URL取得
+  getVideoUrl(key: String!): VideoUrlResponse
     @aws_cognito_user_pools
 }
 
