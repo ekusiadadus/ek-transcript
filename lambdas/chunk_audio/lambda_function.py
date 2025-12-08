@@ -19,6 +19,8 @@ from typing import Any
 
 import boto3
 
+from progress import update_progress
+
 # ロガー設定
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -169,6 +171,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     logger.info(f"Event: {event}")
 
+    # 進捗更新
+    interview_id = event.get("interview_id")
+    if interview_id:
+        update_progress(interview_id, "chunking_audio")
+
     bucket = event["bucket"]
     audio_key = event["audio_key"]
 
@@ -209,7 +216,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             chunk["chunk_key"] = chunk_key
             del chunk["local_path"]
 
-        return {
+        result = {
             "bucket": output_bucket,
             "audio_key": audio_key,
             "audio_duration": audio_duration,
@@ -220,6 +227,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 "overlap_duration": OVERLAP_DURATION,
             },
         }
+        # interview_id を次のステップに渡す
+        if interview_id:
+            result["interview_id"] = interview_id
+        return result
 
     finally:
         # クリーンアップ

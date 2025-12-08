@@ -8,6 +8,7 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as events from "aws-cdk-lib/aws-events";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as path from "path";
 import { Construct } from "constructs";
 
@@ -314,6 +315,38 @@ export class StepFunctionsStack extends cdk.Stack {
     // Add Lambda as target for S3 upload events
     s3UploadRule.addTarget(new targets.LambdaFunction(startPipelineLambda));
 
+    // Completion handler Lambda - updates DynamoDB on execution completion
+    const completionHandlerLambda = new lambdaNodejs.NodejsFunction(
+      this,
+      "CompletionHandlerLambda",
+      {
+        functionName: `ek-transcript-completion-handler-${environment}`,
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.join(__dirname, "../lambdas/completion-handler/index.ts"),
+        handler: "handler",
+        environment: {
+          TABLE_NAME: interviewsTable.tableName,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        bundling: {
+          minify: true,
+          sourceMap: false,
+          externalModules: [],
+        },
+      }
+    );
+
+    // Grant permissions for completion handler
+    interviewsTable.grantWriteData(completionHandlerLambda);
+    // Grant permission to read execution history
+    completionHandlerLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["states:GetExecutionHistory"],
+        resources: [this.stateMachine.stateMachineArn + ":*"],
+      })
+    );
+
     // EventBridge rule for completion notification
     const completionRule = new events.Rule(this, "CompletionRule", {
       ruleName: `ek-transcript-completion-${environment}`,
@@ -322,10 +355,13 @@ export class StepFunctionsStack extends cdk.Stack {
         detailType: ["Step Functions Execution Status Change"],
         detail: {
           stateMachineArn: [this.stateMachine.stateMachineArn],
-          status: ["SUCCEEDED", "FAILED", "TIMED_OUT"],
+          status: ["SUCCEEDED", "FAILED", "TIMED_OUT", "ABORTED"],
         },
       },
     });
+
+    // Add completion handler as target
+    completionRule.addTarget(new targets.LambdaFunction(completionHandlerLambda));
 
     // Outputs
     new cdk.CfnOutput(this, "StateMachineArn", {

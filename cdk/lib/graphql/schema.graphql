@@ -16,6 +16,10 @@ type Interview @aws_cognito_user_pools {
   file_size: Int
   execution_arn: String
   updated_at: AWSDateTime
+  # Progress tracking fields
+  progress: Int
+  current_step: String
+  error_message: String
 }
 
 type InterviewConnection @aws_cognito_user_pools {
@@ -102,6 +106,9 @@ input UpdateInterviewInput {
   video_key: String
   diarization_key: String
   total_score: Int
+  progress: Int
+  current_step: String
+  error_message: String
 }
 
 type Subscription {

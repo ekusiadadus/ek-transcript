@@ -55,13 +55,13 @@ describe("LambdaStack", () => {
   });
 
   describe("LLMAnalysis Lambda DynamoDB Integration", () => {
-    test("llmAnalysisFn has INTERVIEWS_TABLE_NAME environment variable", () => {
+    test("llmAnalysisFn has TABLE_NAME environment variable", () => {
       template.hasResourceProperties("AWS::Lambda::Function", {
         FunctionName: "ek-transcript-llm-analysis-test",
         Environment: {
           Variables: Match.objectLike({
             // Cross-stack reference becomes Fn::ImportValue
-            INTERVIEWS_TABLE_NAME: Match.anyValue(),
+            TABLE_NAME: Match.anyValue(),
           }),
         },
       });

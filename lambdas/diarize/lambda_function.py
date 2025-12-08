@@ -34,6 +34,8 @@ import boto3
 import numpy as np
 import soundfile as sf
 
+from progress import update_progress
+
 # ロガー設定
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -369,10 +371,20 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     logger.info(f"Event: {event}")
 
+    # 進捗更新
+    interview_id = event.get("interview_id")
+    if interview_id:
+        update_progress(interview_id, "diarizing")
+
     # 入力形式を判定
     if "chunk" in event:
-        return handle_chunk_input(event)
+        result = handle_chunk_input(event)
     elif "audio_key" in event:
-        return handle_legacy_input(event)
+        result = handle_legacy_input(event)
     else:
         raise KeyError("Either 'chunk' or 'audio_key' must be provided")
+
+    # interview_id を次のステップに渡す
+    if interview_id:
+        result["interview_id"] = interview_id
+    return result

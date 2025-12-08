@@ -18,6 +18,7 @@ import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from models import HEMSInterviewData
+from progress import update_progress
 
 # ロガー設定
 logger = logging.getLogger()
@@ -255,6 +256,10 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     interview_id = event.get("interview_id")
     video_key = event.get("video_key")
     diarization_key = event.get("diarization_key")
+
+    # 進捗更新
+    if interview_id:
+        update_progress(interview_id, "analyzing")
 
     # S3 から文字起こしを取得
     logger.info(f"Getting transcript from s3://{bucket}/{transcript_key}")

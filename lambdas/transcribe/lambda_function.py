@@ -14,6 +14,8 @@ from typing import Any
 
 import boto3
 
+from progress import update_progress
+
 # ロガー設定
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -73,6 +75,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     logger.info(f"Event: {event}")
 
+    # 進捗更新
+    interview_id = event.get("interview_id")
+    if interview_id:
+        update_progress(interview_id, "transcribing")
+
     bucket = event["bucket"]
     segment_file = event["segment_file"]
 
@@ -122,13 +129,17 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         )
 
         # Step Functionsにはメタデータとキーのみ返す（ペイロード削減）
-        return {
+        result = {
             "bucket": bucket,
             "result_key": result_key,
             "speaker": speaker,
             "start": start,
             "end": end,
         }
+        # interview_id を次のステップに渡す
+        if interview_id:
+            result["interview_id"] = interview_id
+        return result
 
     finally:
         # 一時ファイルをクリーンアップ

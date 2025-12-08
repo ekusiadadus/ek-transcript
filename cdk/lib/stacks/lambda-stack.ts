@@ -55,6 +55,9 @@ export class LambdaStack extends cdk.Stack {
     inputBucket.grantRead(lambdaRole);
     outputBucket.grantReadWrite(lambdaRole);
 
+    // Grant DynamoDB permissions for progress tracking
+    interviewsTable.grantWriteData(lambdaRole);
+
     // ExtractAudio Lambda
     this.extractAudioFn = new lambda.DockerImageFunction(
       this,
@@ -70,6 +73,7 @@ export class LambdaStack extends cdk.Stack {
         environment: {
           INPUT_BUCKET: inputBucket.bucketName,
           OUTPUT_BUCKET: outputBucket.bucketName,
+          TABLE_NAME: interviewsTable.tableName,
           ENVIRONMENT: environment,
         },
         role: lambdaRole,
@@ -92,6 +96,7 @@ export class LambdaStack extends cdk.Stack {
         environment: {
           INPUT_BUCKET: inputBucket.bucketName,
           OUTPUT_BUCKET: outputBucket.bucketName,
+          TABLE_NAME: interviewsTable.tableName,
           CHUNK_DURATION: "480", // 8 minutes
           OVERLAP_DURATION: "30", // 30 seconds
           MIN_CHUNK_DURATION: "60", // 1 minute
@@ -121,6 +126,7 @@ export class LambdaStack extends cdk.Stack {
       environment: {
         INPUT_BUCKET: inputBucket.bucketName,
         OUTPUT_BUCKET: outputBucket.bucketName,
+        TABLE_NAME: interviewsTable.tableName,
         HF_TOKEN_SECRET_ARN: huggingfaceSecret.secretArn,
         HF_HOME: "/opt/huggingface", // Pre-downloaded model location
         ENVIRONMENT: environment,
@@ -144,6 +150,7 @@ export class LambdaStack extends cdk.Stack {
         environment: {
           INPUT_BUCKET: inputBucket.bucketName,
           OUTPUT_BUCKET: outputBucket.bucketName,
+          TABLE_NAME: interviewsTable.tableName,
           SIMILARITY_THRESHOLD: "0.75", // Cosine similarity threshold
           ENVIRONMENT: environment,
         },
@@ -167,6 +174,7 @@ export class LambdaStack extends cdk.Stack {
         environment: {
           INPUT_BUCKET: inputBucket.bucketName,
           OUTPUT_BUCKET: outputBucket.bucketName,
+          TABLE_NAME: interviewsTable.tableName,
           ENVIRONMENT: environment,
         },
         role: lambdaRole,
@@ -191,6 +199,7 @@ export class LambdaStack extends cdk.Stack {
       environment: {
         INPUT_BUCKET: inputBucket.bucketName,
         OUTPUT_BUCKET: outputBucket.bucketName,
+        TABLE_NAME: interviewsTable.tableName,
         WHISPER_MODEL: whisperModel,
         WHISPER_MODEL_DIR: "/opt/whisper-models", // Pre-downloaded model location
         ENVIRONMENT: environment,
@@ -213,6 +222,7 @@ export class LambdaStack extends cdk.Stack {
         environment: {
           INPUT_BUCKET: inputBucket.bucketName,
           OUTPUT_BUCKET: outputBucket.bucketName,
+          TABLE_NAME: interviewsTable.tableName,
           ENVIRONMENT: environment,
         },
         role: lambdaRole,
@@ -231,10 +241,10 @@ export class LambdaStack extends cdk.Stack {
       environment: {
         INPUT_BUCKET: inputBucket.bucketName,
         OUTPUT_BUCKET: outputBucket.bucketName,
+        TABLE_NAME: interviewsTable.tableName,
         OPENAI_SECRET_ARN: openaiSecret.secretArn,
         OPENAI_MODEL: "gpt-5-mini",
         ENVIRONMENT: environment,
-        INTERVIEWS_TABLE_NAME: interviewsTable.tableName,
       },
       role: lambdaRole,
       architecture: lambda.Architecture.X86_64,

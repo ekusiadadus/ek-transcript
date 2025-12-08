@@ -166,7 +166,7 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
 
     const response = await sfnClient.send(command);
 
-    // Save interview record to DynamoDB
+    // Save interview record to DynamoDB with initial progress
     await docClient.send(new PutCommand({
       TableName: tableName,
       Item: {
@@ -178,6 +178,8 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
         video_key: key,
         bucket: bucket,
         status: "processing",
+        progress: 0,
+        current_step: "queued",
         execution_arn: response.executionArn,
         created_at: createdAt,
         updated_at: createdAt,

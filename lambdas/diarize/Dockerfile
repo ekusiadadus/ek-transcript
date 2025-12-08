@@ -21,7 +21,8 @@ RUN mkdir -p /opt/huggingface && \
 
 # Copy function code
 COPY lambda_function.py .
-RUN chmod 644 lambda_function.py
+COPY progress.py .
+RUN chmod 644 lambda_function.py progress.py
 
 # Set the CMD to handler
 CMD ["lambda_function.lambda_handler"]
