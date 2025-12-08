@@ -760,3 +760,771 @@
     text-align: left;
   }
 }
+
+/* Judgment styles */
+.judgmentBadgeLarge {
+  display: inline-block;
+  font-family: var(--font-geist-sans);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.judgmentPriority {
+  background: rgba(var(--success-rgb), 0.2);
+  color: var(--success);
+}
+
+.judgmentPromising {
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+}
+
+.judgmentReview {
+  background: rgba(var(--warning-rgb), 0.2);
+  color: rgb(180, 140, 0);
+}
+
+.judgmentOutside {
+  background: var(--gray-alpha-200);
+  opacity: 0.7;
+}
+
+.judgmentAction {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 8px 0 0 0;
+}
+
+.segmentInfo {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.segmentDef {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.segmentDefLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.segmentDefDesc {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.segmentReason {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 12px 0 0 0;
+  padding: 12px;
+  background: var(--background);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.segmentD {
+  background: var(--gray-alpha-200);
+  color: inherit;
+  opacity: 0.7;
+}
+
+.scoreDetails {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 4px 0 12px 156px;
+  padding-left: 8px;
+  border-left: 2px solid var(--gray-alpha-200);
+}
+
+/* Score Details Section */
+.scoreDetailsSection {
+  margin-bottom: 24px;
+}
+
+.sectionTitleLarge {
+  font-family: var(--font-geist-sans);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+}
+
+.scoreDetailsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.scoreDetailCard {
+  padding: 20px;
+  border: 1px solid var(--gray-alpha-200);
+  border-radius: 12px;
+  background: var(--gray-alpha-100);
+}
+
+.scoreDetailTitle {
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scoreDetailValue {
+  font-family: var(--font-geist-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.scoreChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.checkItemPass {
+  background: rgba(var(--success-rgb), 0.1);
+}
+
+.checkItemFail {
+  background: var(--gray-alpha-100);
+  opacity: 0.6;
+}
+
+.checkIcon {
+  font-size: 14px;
+  font-weight: 600;
+  width: 18px;
+  text-align: center;
+}
+
+.checkItemPass .checkIcon {
+  color: var(--success);
+}
+
+.checkItemFail .checkIcon {
+  color: var(--gray-alpha-200);
+}
+
+.checkLabel {
+  flex: 1;
+  font-family: var(--font-geist-sans);
+}
+
+.checkPoints {
+  font-family: var(--font-geist-mono);
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.pastActions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-alpha-200);
+}
+
+.pastActionsLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 0 0 8px 0;
+}
+
+.tagAction {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
+}
+
+.painScore {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.painScoreLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.painScoreValue {
+  font-family: var(--font-geist-mono);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.deviceMetrics, .cfMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.deviceMetric, .cfMetric {
+  padding: 8px;
+  background: var(--background);
+  border-radius: 6px;
+  border: 1px solid var(--gray-alpha-200);
+}
+
+.deviceMetricLabel, .cfMetricLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 10px;
+  opacity: 0.6;
+  display: block;
+}
+
+.deviceMetricValue, .cfMetricValue {
+  font-family: var(--font-geist-mono);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.mostUsedFeature {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  margin: 12px 0 0 0;
+  padding: 8px;
+  background: var(--background);
+  border-radius: 6px;
+}
+
+.supportedCategories, .supportedCategoriesLabel {
+  margin-top: 12px;
+}
+
+.supportedCategoriesLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 0 0 8px 0;
+}
+
+/* Price Sensitivity Section */
+.priceSection {
+  padding: 24px;
+  border: 1px solid var(--gray-alpha-200);
+  border-radius: 16px;
+  background: var(--gray-alpha-100);
+  margin-bottom: 24px;
+}
+
+.priceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.priceCard {
+  padding: 16px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--gray-alpha-200);
+  text-align: center;
+}
+
+.priceLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.priceValue {
+  font-family: var(--font-geist-mono);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.purchaseInfo {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gray-alpha-200);
+}
+
+.purchaseItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.purchaseLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.purchaseValue {
+  font-family: var(--font-geist-mono);
+  font-size: 13px;
+}
+
+/* Family & Barriers Section */
+.familySection {
+  padding: 24px;
+  border: 1px solid var(--gray-alpha-200);
+  border-radius: 16px;
+  background: var(--gray-alpha-100);
+  margin-bottom: 24px;
+}
+
+.familyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.familyCard {
+  padding: 16px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--gray-alpha-200);
+}
+
+.familyCardTitle {
+  font-family: var(--font-geist-sans);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.familyMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.familyMetric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.familyMetricLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.familyMetricValue {
+  font-family: var(--font-geist-mono);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.nonUsageReason {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 12px 0 0 0;
+  padding: 8px;
+  background: var(--gray-alpha-100);
+  border-radius: 4px;
+}
+
+.npsSection {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.npsScore, .recommendInfo {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  background: var(--gray-alpha-100);
+  border-radius: 6px;
+}
+
+.npsLabel, .recommendLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 10px;
+  opacity: 0.6;
+  display: block;
+}
+
+.npsValue {
+  font-family: var(--font-geist-mono);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.recommendValue {
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.recommendPhrase {
+  margin-top: 8px;
+}
+
+.recommendPhraseLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 10px;
+  opacity: 0.6;
+  margin: 0 0 4px 0;
+}
+
+.recommendPhraseText {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  font-style: italic;
+  margin: 0;
+}
+
+.tagBarrier {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(var(--warning-rgb), 0.15);
+  color: rgb(180, 140, 0);
+}
+
+.noBarriers {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  opacity: 0.6;
+  margin: 0;
+}
+
+.abandonedIdeas {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-alpha-200);
+}
+
+.abandonedIdeasLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 10px;
+  opacity: 0.6;
+  margin: 0 0 4px 0;
+}
+
+.abandonedIdeasText {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  margin: 0;
+}
+
+/* Signal Analysis Section */
+.signalAnalysisSection {
+  padding: 24px;
+  border: 1px solid var(--gray-alpha-200);
+  border-radius: 16px;
+  background: var(--gray-alpha-100);
+  margin-bottom: 24px;
+}
+
+.signalSummary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.signalSummaryGood {
+  font-family: var(--font-geist-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--success);
+  padding: 8px 16px;
+  background: rgba(var(--success-rgb), 0.1);
+  border-radius: 8px;
+}
+
+.signalSummaryBad {
+  font-family: var(--font-geist-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--error);
+  padding: 8px 16px;
+  background: rgba(var(--error-rgb), 0.1);
+  border-radius: 8px;
+}
+
+.signalAnalysisGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.signalAnalysisCard {
+  padding: 16px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--gray-alpha-200);
+}
+
+.signalAnalysisTitleGood {
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--success);
+  margin: 0 0 12px 0;
+}
+
+.signalAnalysisTitleBad {
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--error);
+  margin: 0 0 12px 0;
+}
+
+.signalChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signalCheckItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.signalCheckPass {
+  background: rgba(var(--success-rgb), 0.1);
+}
+
+.signalCheckFail {
+  background: var(--gray-alpha-100);
+  opacity: 0.5;
+}
+
+.signalCheckWarn {
+  background: rgba(var(--error-rgb), 0.1);
+}
+
+.signalCheckOk {
+  background: rgba(var(--success-rgb), 0.05);
+}
+
+.signalCheckIcon {
+  font-size: 14px;
+  font-weight: 600;
+  width: 18px;
+  text-align: center;
+}
+
+.signalCheckPass .signalCheckIcon {
+  color: var(--success);
+}
+
+.signalCheckWarn .signalCheckIcon {
+  color: var(--error);
+}
+
+.signalCheckOk .signalCheckIcon {
+  color: var(--success);
+  opacity: 0.5;
+}
+
+.signalCheckLabel {
+  flex: 1;
+  font-family: var(--font-geist-sans);
+}
+
+.additionalSignals {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-alpha-200);
+}
+
+.additionalSignalsLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 0 0 8px 0;
+}
+
+.additionalSignalsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.additionalSignalsList li {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.additionalSignalsList li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+}
+
+/* Details Section Extensions */
+.purchasedItems, .purchasedItemsLabel,
+.devicesList, .devicesListLabel,
+.satisfactionPoints, .satisfactionPointsLabel,
+.dissatisfactionPoints, .dissatisfactionPointsLabel,
+.unusedFeatures, .unusedFeaturesLabel,
+.canceledSubs, .canceledSubsLabel {
+  margin-top: 12px;
+}
+
+.purchasedItemsLabel, .devicesListLabel,
+.satisfactionPointsLabel, .dissatisfactionPointsLabel,
+.unusedFeaturesLabel, .canceledSubsLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 0 0 8px 0;
+}
+
+.tagPositive {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
+}
+
+.tagNegative {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(var(--error-rgb), 0.15);
+  color: var(--error);
+}
+
+.tagMuted {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: var(--gray-alpha-200);
+  opacity: 0.7;
+}
+
+/* Insights Section Extensions */
+.insightQuoteSection {
+  margin-bottom: 24px;
+}
+
+.insightQuoteLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.insightsGridDetailed {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.insightDetailCard {
+  padding: 16px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--gray-alpha-200);
+}
+
+.insightDetailCardHighlight {
+  padding: 16px;
+  background: rgba(var(--accent-rgb), 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  grid-column: span 2;
+}
+
+/* Responsive for new sections */
+@media (max-width: 1200px) {
+  .scoreDetailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .priceGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .purchaseInfo {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .familyGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .signalAnalysisGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .insightsGridDetailed {
+    grid-template-columns: 1fr;
+  }
+
+  .insightDetailCardHighlight {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .priceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .purchaseInfo {
+    grid-template-columns: 1fr;
+  }
+
+  .deviceMetrics, .cfMetrics {
+    grid-template-columns: 1fr;
+  }
+}
