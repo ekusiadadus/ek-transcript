@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth-context";
 import { getInterview, getVideoUrl, type Interview } from "../../../lib/graphql";
+import { TranscriptViewer } from "../../../components/TranscriptViewer";
+import { AnalysisViewer } from "../../../components/AnalysisViewer";
 import styles from "./page.module.css";
 
 type ProcessingStatus = "pending" | "processing" | "completed" | "failed";
@@ -168,36 +170,17 @@ function InterviewContent({ interview }: { interview: Interview }) {
         </div>
       </div>
 
-      {interview.transcript_key && (
-        <div className={styles.resultSection}>
-          <h2 className={styles.sectionTitle}>文字起こし</h2>
-          <div className={styles.resultBox}>
-            <p className={styles.resultPlaceholder}>
-              文字起こし結果: {interview.transcript_key}
-            </p>
-          </div>
-        </div>
-      )}
-
       {interview.analysis_key && (
         <div className={styles.resultSection}>
           <h2 className={styles.sectionTitle}>LLM分析結果</h2>
-          <div className={styles.resultBox}>
-            <p className={styles.resultPlaceholder}>
-              分析結果: {interview.analysis_key}
-            </p>
-          </div>
+          <AnalysisViewer analysisKey={interview.analysis_key} />
         </div>
       )}
 
-      {interview.diarization_key && (
+      {interview.transcript_key && (
         <div className={styles.resultSection}>
-          <h2 className={styles.sectionTitle}>話者分離</h2>
-          <div className={styles.resultBox}>
-            <p className={styles.resultPlaceholder}>
-              話者分離結果: {interview.diarization_key}
-            </p>
-          </div>
+          <h2 className={styles.sectionTitle}>文字起こし</h2>
+          <TranscriptViewer transcriptKey={interview.transcript_key} />
         </div>
       )}
     </div>
