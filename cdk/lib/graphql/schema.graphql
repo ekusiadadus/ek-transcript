@@ -66,6 +66,31 @@ type Query {
   # S3動画再生用Presigned URL取得
   getVideoUrl(key: String!): VideoUrlResponse
     @aws_cognito_user_pools
+
+  # ========================================
+  # Google Meet Integration Queries
+  # ========================================
+
+  # 単一会議取得
+  getMeeting(meeting_id: ID!): Meeting
+    @aws_cognito_user_pools
+
+  # 会議一覧取得（ページネーション対応）
+  listMeetings(
+    limit: Int
+    nextToken: String
+    status: MeetingStatus
+  ): MeetingConnection
+    @aws_cognito_user_pools
+
+  # 日付範囲で会議取得
+  listMeetingsByDateRange(
+    start_date: AWSDateTime!
+    end_date: AWSDateTime!
+    limit: Int
+    nextToken: String
+  ): MeetingConnection
+    @aws_cognito_user_pools
 }
 
 type Mutation {
@@ -79,6 +104,34 @@ type Mutation {
 
   # インタビュー削除
   deleteInterview(interview_id: ID!): Interview
+    @aws_cognito_user_pools
+
+  # ========================================
+  # Google Meet Integration Mutations
+  # ========================================
+
+  # 会議作成（Google Calendar + Meet Space 作成）
+  createMeeting(input: CreateMeetingInput!): Meeting
+    @aws_cognito_user_pools
+
+  # 会議更新
+  updateMeeting(input: UpdateMeetingInput!): Meeting
+    @aws_cognito_user_pools
+
+  # 会議削除
+  deleteMeeting(meeting_id: ID!): Meeting
+    @aws_cognito_user_pools
+
+  # Google Calendar 同期
+  syncCalendar(input: SyncCalendarInput): CalendarSyncResult
+    @aws_cognito_user_pools
+
+  # 会議の録画設定更新
+  updateMeetingRecordingConfig(
+    meeting_id: ID!
+    auto_recording: Boolean!
+    auto_transcription: Boolean
+  ): Meeting
     @aws_cognito_user_pools
 }
 
@@ -121,6 +174,92 @@ type Subscription {
   onUpdateInterview: Interview
     @aws_subscribe(mutations: ["updateInterview"])
     @aws_cognito_user_pools
+
+  # 会議作成イベント購読
+  onCreateMeeting: Meeting
+    @aws_subscribe(mutations: ["createMeeting"])
+    @aws_cognito_user_pools
+
+  # 会議更新イベント購読
+  onUpdateMeeting: Meeting
+    @aws_subscribe(mutations: ["updateMeeting"])
+    @aws_cognito_user_pools
+}
+
+# ========================================
+# Google Meet Integration Types
+# ========================================
+
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  RECORDING_AVAILABLE
+  PROCESSING
+  ANALYZED
+}
+
+type Meeting @aws_cognito_user_pools {
+  meeting_id: ID!
+  user_id: String!
+  title: String!
+  description: String
+  start_time: AWSDateTime!
+  end_time: AWSDateTime!
+  status: MeetingStatus!
+  google_calendar_event_id: String
+  google_meet_space_id: String
+  google_meet_uri: String
+  auto_recording: Boolean
+  auto_transcription: Boolean
+  recording_file_id: String
+  recording_s3_key: String
+  interview_id: String
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime
+}
+
+type MeetingConnection @aws_cognito_user_pools {
+  items: [Meeting!]!
+  nextToken: String
+}
+
+type CalendarSyncResult @aws_cognito_user_pools {
+  success: Boolean!
+  synced_count: Int!
+  new_meetings: [Meeting!]
+  updated_meetings: [Meeting!]
+  error_message: String
+}
+
+input CreateMeetingInput {
+  title: String!
+  description: String
+  start_time: AWSDateTime!
+  end_time: AWSDateTime!
+  auto_recording: Boolean
+  auto_transcription: Boolean
+}
+
+input UpdateMeetingInput {
+  meeting_id: ID!
+  title: String
+  description: String
+  start_time: AWSDateTime
+  end_time: AWSDateTime
+  status: MeetingStatus
+  auto_recording: Boolean
+  auto_transcription: Boolean
+  recording_file_id: String
+  recording_s3_key: String
+  interview_id: String
+}
+
+input SyncCalendarInput {
+  start_date: AWSDateTime
+  end_date: AWSDateTime
+  max_results: Int
 }
 
 schema {

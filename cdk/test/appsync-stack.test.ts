@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import { AppSyncStack } from "../lib/stacks/appsync-stack";
@@ -15,8 +16,10 @@ describe("AppSyncStack", () => {
   let mockInterviewsTable: dynamodb.ITable;
   let mockInputBucket: s3.IBucket;
   let mockOutputBucket: s3.IBucket;
+  let mockMeetingsTable: dynamodb.ITable;
+  let mockCalendarSyncLambda: lambda.IFunction;
 
-  beforeEach(() => {
+  beforeAll(() => {
     app = new cdk.App();
 
     // Create a prerequisite stack to hold mock resources
@@ -41,12 +44,26 @@ describe("AppSyncStack", () => {
       bucketName: "test-output-bucket",
     });
 
+    mockMeetingsTable = new dynamodb.Table(prereqStack, "MockMeetingsTable", {
+      tableName: "test-meetings-table",
+      partitionKey: { name: "meeting_id", type: dynamodb.AttributeType.STRING },
+    });
+
+    mockCalendarSyncLambda = new lambda.Function(prereqStack, "MockCalendarSyncLambda", {
+      functionName: "test-calendar-sync",
+      runtime: lambda.Runtime.PYTHON_3_12,
+      handler: "index.handler",
+      code: lambda.Code.fromInline("def handler(event, context): pass"),
+    });
+
     stack = new AppSyncStack(app, "TestAppSyncStack", {
       environment: "test",
       userPool: mockUserPool,
       interviewsTable: mockInterviewsTable,
       inputBucket: mockInputBucket,
       outputBucket: mockOutputBucket,
+      meetingsTable: mockMeetingsTable,
+      calendarSyncLambda: mockCalendarSyncLambda,
       env: { account: "123456789012", region: "ap-northeast-1" },
     });
 
@@ -165,6 +182,62 @@ describe("AppSyncStack", () => {
 
     test("exports Events API endpoint", () => {
       template.hasOutput("EventsApiEndpoint", {});
+    });
+  });
+
+  describe("Google Meet Integration", () => {
+    describe("Meeting Resolvers", () => {
+      test("creates resolver for getMeeting query", () => {
+        template.hasResourceProperties("AWS::AppSync::Resolver", {
+          TypeName: "Query",
+          FieldName: "getMeeting",
+        });
+      });
+
+      test("creates resolver for listMeetings query", () => {
+        template.hasResourceProperties("AWS::AppSync::Resolver", {
+          TypeName: "Query",
+          FieldName: "listMeetings",
+        });
+      });
+
+      test("creates resolver for createMeeting mutation", () => {
+        template.hasResourceProperties("AWS::AppSync::Resolver", {
+          TypeName: "Mutation",
+          FieldName: "createMeeting",
+        });
+      });
+
+      test("creates resolver for updateMeeting mutation", () => {
+        template.hasResourceProperties("AWS::AppSync::Resolver", {
+          TypeName: "Mutation",
+          FieldName: "updateMeeting",
+        });
+      });
+
+      test("creates resolver for deleteMeeting mutation", () => {
+        template.hasResourceProperties("AWS::AppSync::Resolver", {
+          TypeName: "Mutation",
+          FieldName: "deleteMeeting",
+        });
+      });
+    });
+
+    describe("Calendar Sync Resolvers", () => {
+      test("creates resolver for syncCalendar mutation", () => {
+        template.hasResourceProperties("AWS::AppSync::Resolver", {
+          TypeName: "Mutation",
+          FieldName: "syncCalendar",
+        });
+      });
+    });
+
+    describe("Channel Namespaces", () => {
+      test("creates meetings channel namespace", () => {
+        template.hasResourceProperties("AWS::AppSync::ChannelNamespace", {
+          Name: "meetings",
+        });
+      });
     });
   });
 });

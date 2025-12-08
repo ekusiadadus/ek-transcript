@@ -14,6 +14,8 @@ export interface AppSyncStackProps extends cdk.StackProps {
   interviewsTable: dynamodb.ITable;
   inputBucket: s3.IBucket;
   outputBucket: s3.IBucket;
+  meetingsTable?: dynamodb.ITable;
+  calendarSyncLambda?: lambda.IFunction;
 }
 
 export class AppSyncStack extends cdk.Stack {
@@ -23,7 +25,7 @@ export class AppSyncStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AppSyncStackProps) {
     super(scope, id, props);
 
-    const { environment, userPool, interviewsTable, inputBucket, outputBucket } = props;
+    const { environment, userPool, interviewsTable, inputBucket, outputBucket, meetingsTable, calendarSyncLambda } = props;
 
     // Presigned URL Lambda (Upload)
     const presignedUrlLambda = new lambdaNodejs.NodejsFunction(
@@ -210,6 +212,83 @@ export class AppSyncStack extends cdk.Stack {
       dataSource: videoUrlDataSource,
     });
 
+    // ========================================
+    // Google Meet Integration Resolvers
+    // ========================================
+    if (meetingsTable) {
+      // Meetings DynamoDB Data Source
+      const meetingsDataSource = this.graphqlApi.addDynamoDbDataSource(
+        "MeetingsDataSource",
+        meetingsTable
+      );
+
+      // getMeeting resolver
+      new appsync.Resolver(this, "GetMeetingResolver", {
+        api: this.graphqlApi,
+        typeName: "Query",
+        fieldName: "getMeeting",
+        dataSource: meetingsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "getMeeting.js")),
+      });
+
+      // listMeetings resolver
+      new appsync.Resolver(this, "ListMeetingsResolver", {
+        api: this.graphqlApi,
+        typeName: "Query",
+        fieldName: "listMeetings",
+        dataSource: meetingsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "listMeetings.js")),
+      });
+
+      // createMeeting resolver
+      new appsync.Resolver(this, "CreateMeetingResolver", {
+        api: this.graphqlApi,
+        typeName: "Mutation",
+        fieldName: "createMeeting",
+        dataSource: meetingsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "createMeeting.js")),
+      });
+
+      // updateMeeting resolver
+      new appsync.Resolver(this, "UpdateMeetingResolver", {
+        api: this.graphqlApi,
+        typeName: "Mutation",
+        fieldName: "updateMeeting",
+        dataSource: meetingsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "updateMeeting.js")),
+      });
+
+      // deleteMeeting resolver
+      new appsync.Resolver(this, "DeleteMeetingResolver", {
+        api: this.graphqlApi,
+        typeName: "Mutation",
+        fieldName: "deleteMeeting",
+        dataSource: meetingsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "deleteMeeting.js")),
+      });
+    }
+
+    // Calendar Sync Lambda resolver
+    if (calendarSyncLambda) {
+      const calendarSyncDataSource = this.graphqlApi.addLambdaDataSource(
+        "CalendarSyncDataSource",
+        calendarSyncLambda
+      );
+
+      // syncCalendar resolver (Lambda proxy - no custom resolver code needed)
+      new appsync.Resolver(this, "SyncCalendarResolver", {
+        api: this.graphqlApi,
+        typeName: "Mutation",
+        fieldName: "syncCalendar",
+        dataSource: calendarSyncDataSource,
+      });
+    }
+
     // Events API for real-time pub/sub (2025 feature)
     this.eventsApi = new appsync.EventApi(this, "EventsApi", {
       apiName: `ek-transcript-events-${environment}`,
@@ -248,6 +327,12 @@ export class AppSyncStack extends cdk.Stack {
     new appsync.ChannelNamespace(this, "ProgressNamespace", {
       api: this.eventsApi,
       channelNamespaceName: "progress",
+    });
+
+    // Meetings channel namespace for Google Meet events
+    new appsync.ChannelNamespace(this, "MeetingsNamespace", {
+      api: this.eventsApi,
+      channelNamespaceName: "meetings",
     });
 
     // Outputs
