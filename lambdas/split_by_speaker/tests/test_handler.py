@@ -4,7 +4,8 @@ SplitBySpeaker Lambda のテスト
 第5原則: テストファースト
 
 修正: States.DataLimitExceeded対策
-- segment_filesをS3に保存し、キーのみ返す
+- segment_filesをS3に保存（AggregateResults用）
+- segment_filesも返す（TranscribeSegments Map state用、約100バイト/セグメントで256KB未満）
 """
 
 import importlib.util
@@ -86,8 +87,9 @@ class TestSplitBySpeaker:
         assert "segment_files_key" in result
         assert result["segment_files_key"].endswith("_segment_files.json")
         assert result["segment_count"] == 2
-        # segment_filesは返却値に含まれない（ペイロード削減）
-        assert "segment_files" not in result
+        # segment_filesも返される（Map state用）
+        assert "segment_files" in result
+        assert len(result["segment_files"]) == 2
 
     def test_lambda_handler_saves_segment_files_to_s3(
         self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
@@ -134,7 +136,7 @@ class TestSplitBySpeaker:
     def test_lambda_handler_many_segments(
         self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
     ) -> None:
-        """多数のセグメント（900+）でもペイロードが小さいこと"""
+        """多数のセグメント（900+）でもペイロードが256KB未満であること"""
         # 900セグメント分のモックデータ
         segments = [
             {"start": float(i), "end": float(i + 1), "speaker": f"SPEAKER_{i % 2:02d}"}
@@ -153,12 +155,13 @@ class TestSplitBySpeaker:
 
         result = lambda_module.lambda_handler(event, context)
 
-        # 返却値は軽量（segment_filesは含まれない）
+        # segment_filesが返される（Map state用）
         assert result["segment_count"] == 900
-        assert "segment_files" not in result
-        # 返却値のサイズが小さいことを確認
+        assert "segment_files" in result
+        assert len(result["segment_files"]) == 900
+        # 返却値のサイズが256KB未満であることを確認（約100バイト/セグメント）
         result_json = json.dumps(result)
-        assert len(result_json) < 1000  # 1KB未満
+        assert len(result_json) < 256 * 1024  # 256KB未満
 
     def test_split_audio_calls_ffmpeg_correctly(
         self, mock_subprocess: MagicMock, tmp_path: Path

@@ -185,6 +185,8 @@ export class StepFunctionsStack extends cdk.Stack {
     });
 
     // Map state for parallel transcription
+    // States.DataLimitExceeded対策: 結果は各Lambdaが個別にS3に保存するため、
+    // Map stateの結果は破棄する（256KB制限を回避）
     const transcribeSegments = new sfn.Map(this, "TranscribeSegments", {
       itemsPath: "$.segment_files",
       maxConcurrency: 10,
@@ -192,7 +194,7 @@ export class StepFunctionsStack extends cdk.Stack {
         "bucket.$": "$.bucket",
         "segment_file.$": "$$.Map.Item.Value",
       },
-      resultPath: "$.transcription_results",
+      resultPath: sfn.JsonPath.DISCARD,
     });
     transcribeSegments.itemProcessor(transcribeTask);
     transcribeSegments.addCatch(handleError, {

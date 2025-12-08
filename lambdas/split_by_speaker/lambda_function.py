@@ -159,10 +159,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             ContentType="application/json",
         )
 
-        # Step Functionsにはメタデータとキーのみ返す（ペイロード削減）
+        # Step Functionsに返す（segment_filesは約100バイト/セグメントで256KB未満）
         result = {
             "bucket": output_bucket,
-            "segment_files_key": segment_files_key,
+            "segment_files": segment_files,  # Map state用
+            "segment_files_key": segment_files_key,  # AggregateResults用（S3から読み込み）
             "segment_count": len(segment_files),
             "audio_key": audio_key,
         }
