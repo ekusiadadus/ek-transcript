@@ -204,8 +204,10 @@ interface DashboardStats {
   totalInterviews: number;
   completedInterviews: number;
   averageScore: number;
-  segmentCounts: { A: number; B: number; C: number; other: number };
+  segmentCounts: { A: number; B: number; C: number; D: number; other: number };
   scoreDistribution: number[];
+  priorityTargetCount: number; // 25点以上
+  promisingTargetCount: number; // 18-24点
 }
 
 function calculateStats(interviews: InterviewWithAnalysis[]): DashboardStats {
@@ -216,21 +218,30 @@ function calculateStats(interviews: InterviewWithAnalysis[]): DashboardStats {
     ? withScores.reduce((sum, i) => sum + (i.total_score || 0), 0) / withScores.length
     : 0;
 
-  const segmentCounts = { A: 0, B: 0, C: 0, other: 0 };
+  // セグメント分類 (A: 省エネ意識高, B: ガジェット好き, C: 便利さ追求, D: ライト層)
+  const segmentCounts = { A: 0, B: 0, C: 0, D: 0, other: 0 };
   completed.forEach(i => {
     const seg = i.analysisData?.scoring?.segment;
     if (seg === "A") segmentCounts.A++;
     else if (seg === "B") segmentCounts.B++;
     else if (seg === "C") segmentCounts.C++;
+    else if (seg === "D") segmentCounts.D++;
     else segmentCounts.other++;
   });
 
   // Score distribution (0-5, 6-10, 11-15, 16-20, 21-25, 26-30)
   const scoreDistribution = [0, 0, 0, 0, 0, 0];
+  let priorityTargetCount = 0; // 25-30点: 最優先ターゲット
+  let promisingTargetCount = 0; // 18-24点: 有望ターゲット
+
   withScores.forEach(i => {
     const score = i.total_score || 0;
     const bucket = Math.min(Math.floor(score / 5), 5);
     scoreDistribution[bucket]++;
+
+    // 判定基準によるカウント
+    if (score >= 25) priorityTargetCount++;
+    else if (score >= 18) promisingTargetCount++;
   });
 
   return {
@@ -239,21 +250,26 @@ function calculateStats(interviews: InterviewWithAnalysis[]): DashboardStats {
     averageScore: Math.round(avgScore * 10) / 10,
     segmentCounts,
     scoreDistribution,
+    priorityTargetCount,
+    promisingTargetCount,
   };
 }
 
+// 判定基準に基づくラベル取得
+function getScoreJudgment(score: number): { label: string; className: string } {
+  if (score >= 25) return { label: "最優先ターゲット", className: styles.judgmentPriority };
+  if (score >= 18) return { label: "有望ターゲット", className: styles.judgmentPromising };
+  if (score >= 12) return { label: "要検討", className: styles.judgmentReview };
+  return { label: "ターゲット外", className: styles.judgmentOutside };
+}
+
 function StatsGrid({ stats }: { stats: DashboardStats }) {
+  const judgment = getScoreJudgment(stats.averageScore);
+
   return (
     <div className={styles.statsGrid}>
       <div className={styles.statCard}>
-        <p className={styles.statLabel}>総インタビュー数</p>
-        <p className={styles.statValue}>
-          {stats.totalInterviews}
-          <span className={styles.statUnit}>件</span>
-        </p>
-      </div>
-      <div className={styles.statCard}>
-        <p className={styles.statLabel}>完了</p>
+        <p className={styles.statLabel}>完了インタビュー数</p>
         <p className={styles.statValue}>
           {stats.completedInterviews}
           <span className={styles.statUnit}>件</span>
@@ -265,6 +281,15 @@ function StatsGrid({ stats }: { stats: DashboardStats }) {
           {stats.averageScore}
           <span className={styles.statUnit}>/30</span>
         </p>
+        <p className={`${styles.judgment} ${judgment.className}`}>{judgment.label}</p>
+      </div>
+      <div className={styles.statCard}>
+        <p className={styles.statLabel}>最優先ターゲット</p>
+        <p className={styles.statValue}>
+          {stats.priorityTargetCount}
+          <span className={styles.statUnit}>件</span>
+        </p>
+        <p className={styles.statSubLabel}>25点以上</p>
       </div>
       <div className={styles.statCard}>
         <p className={styles.statLabel}>セグメントA率</p>
@@ -274,13 +299,22 @@ function StatsGrid({ stats }: { stats: DashboardStats }) {
             : 0}
           <span className={styles.statUnit}>%</span>
         </p>
+        <p className={styles.statSubLabel}>省エネ意識高</p>
       </div>
     </div>
   );
 }
 
+// セグメント定義
+const SEGMENT_DEFINITIONS: Record<string, { label: string; description: string }> = {
+  A: { label: "省エネ意識高", description: "電気代関心度7点以上 + 電力切替経験あり" },
+  B: { label: "ガジェット好き", description: "クラファン経験あり + 連携家電5台以上" },
+  C: { label: "便利さ追求", description: "エンゲージメント7点以上 + 電気代関心度4点以下" },
+  D: { label: "ライト層", description: "アプリ月数回以下 + オートメーション1つ以下" },
+};
+
 function ChartsSection({ stats }: { stats: DashboardStats }) {
-  const total = stats.segmentCounts.A + stats.segmentCounts.B + stats.segmentCounts.C + stats.segmentCounts.other;
+  const total = stats.segmentCounts.A + stats.segmentCounts.B + stats.segmentCounts.C + stats.segmentCounts.D + stats.segmentCounts.other;
   const maxScoreCount = Math.max(...stats.scoreDistribution, 1);
 
   return (
@@ -288,12 +322,15 @@ function ChartsSection({ stats }: { stats: DashboardStats }) {
       <div className={styles.chartCard}>
         <h3 className={styles.chartTitle}>セグメント分布</h3>
         <div className={styles.barChart}>
-          {["A", "B", "C"].map((seg) => {
+          {["A", "B", "C", "D"].map((seg) => {
             const count = stats.segmentCounts[seg as keyof typeof stats.segmentCounts];
             const percentage = total > 0 ? (count / total) * 100 : 0;
+            const definition = SEGMENT_DEFINITIONS[seg];
             return (
               <div key={seg} className={styles.barRow}>
-                <span className={styles.barLabel}>セグメント{seg}</span>
+                <span className={styles.barLabel} title={definition?.description}>
+                  {seg}: {definition?.label}
+                </span>
                 <div className={styles.barContainer}>
                   <div
                     className={`${styles.barFill} ${styles[`barFill${seg}`]}`}

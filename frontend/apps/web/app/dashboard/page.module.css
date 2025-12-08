@@ -226,6 +226,44 @@
   margin-left: 4px;
 }
 
+.statSubLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  opacity: 0.6;
+  margin: 6px 0 0 0;
+}
+
+/* 判定基準スタイル */
+.judgment {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.judgmentPriority {
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
+}
+
+.judgmentPromising {
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+}
+
+.judgmentReview {
+  background: rgba(var(--warning-rgb), 0.15);
+  color: rgb(180, 140, 0);
+}
+
+.judgmentOutside {
+  background: var(--gray-alpha-200);
+  opacity: 0.7;
+}
+
 /* Charts section */
 .chartsGrid {
   display: grid;
@@ -262,8 +300,8 @@
 
 .barLabel {
   font-family: var(--font-geist-mono);
-  font-size: 12px;
-  width: 80px;
+  font-size: 11px;
+  width: 120px;
   flex-shrink: 0;
 }
 
@@ -291,6 +329,10 @@
 
 .barFillC {
   background: var(--warning);
+}
+
+.barFillD {
+  background: var(--gray-alpha-200);
 }
 
 .barValue {
