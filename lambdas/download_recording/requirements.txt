@@ -1,0 +1,5 @@
+# Download Recording Lambda dependencies
+boto3>=1.42.0
+google-auth>=2.37.0
+google-auth-oauthlib>=1.2.0
+google-api-python-client>=2.160.0
