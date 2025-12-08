@@ -2,6 +2,9 @@
 SplitBySpeaker Lambda のテスト
 
 第5原則: テストファースト
+
+修正: States.DataLimitExceeded対策
+- segment_filesをS3に保存し、キーのみ返す
 """
 
 import importlib.util
@@ -9,9 +12,15 @@ import json
 import sys
 from collections.abc import Generator
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# progress モジュールのモック（Lambda 実行環境でのみ存在）
+mock_progress = ModuleType("progress")
+mock_progress.update_progress = MagicMock()  # type: ignore
+sys.modules["progress"] = mock_progress
 
 # このLambdaのlambda_function.pyを動的にインポート
 LAMBDA_DIR = Path(__file__).parent.parent
@@ -62,7 +71,7 @@ class TestSplitBySpeaker:
     def test_lambda_handler_success(
         self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
     ) -> None:
-        """正常系: 音声分割が成功すること"""
+        """正常系: 音声分割が成功し、segment_filesがS3に保存されること"""
         event = {
             "bucket": "test-bucket",
             "audio_key": "processed/test.wav",
@@ -73,8 +82,35 @@ class TestSplitBySpeaker:
         result = lambda_module.lambda_handler(event, context)
 
         assert result["bucket"] == "test-bucket"
-        assert "segment_files" in result
-        assert len(result["segment_files"]) == 2
+        # segment_filesはS3に保存され、キーが返される
+        assert "segment_files_key" in result
+        assert result["segment_files_key"].endswith("_segment_files.json")
+        assert result["segment_count"] == 2
+        # segment_filesは返却値に含まれない（ペイロード削減）
+        assert "segment_files" not in result
+
+    def test_lambda_handler_saves_segment_files_to_s3(
+        self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
+    ) -> None:
+        """segment_filesがS3に正しく保存されること"""
+        event = {
+            "bucket": "test-bucket",
+            "audio_key": "processed/test.wav",
+            "segments_key": "processed/test_segments.json",
+        }
+        context = MagicMock()
+
+        lambda_module.lambda_handler(event, context)
+
+        # put_objectが呼ばれたことを確認（segment_files.jsonの保存）
+        put_calls = [c for c in mock_s3.put_object.call_args_list]
+        assert len(put_calls) >= 1
+
+        # 保存されたJSONの内容を検証
+        last_call = put_calls[-1]
+        saved_data = json.loads(last_call.kwargs["Body"])
+        assert len(saved_data) == 2
+        assert saved_data[0]["speaker"] == "SPEAKER_00"
 
     def test_lambda_handler_empty_segments(
         self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
@@ -93,29 +129,36 @@ class TestSplitBySpeaker:
 
         result = lambda_module.lambda_handler(event, context)
 
-        assert result["segment_files"] == []
+        assert result["segment_count"] == 0
 
-    def test_lambda_handler_segment_files_have_correct_format(
+    def test_lambda_handler_many_segments(
         self, mock_s3: MagicMock, mock_subprocess: MagicMock, mock_os: None
     ) -> None:
-        """セグメントファイルが正しい形式で返されること"""
+        """多数のセグメント（900+）でもペイロードが小さいこと"""
+        # 900セグメント分のモックデータ
+        segments = [
+            {"start": float(i), "end": float(i + 1), "speaker": f"SPEAKER_{i % 2:02d}"}
+            for i in range(900)
+        ]
+        mock_s3.get_object.return_value = {
+            "Body": MagicMock(read=lambda: json.dumps(segments).encode())
+        }
+
         event = {
             "bucket": "test-bucket",
-            "audio_key": "processed/meeting.wav",
-            "segments_key": "processed/meeting_segments.json",
+            "audio_key": "processed/test.wav",
+            "segments_key": "processed/test_segments.json",
         }
         context = MagicMock()
 
         result = lambda_module.lambda_handler(event, context)
 
-        # 最初のセグメントを検証
-        seg = result["segment_files"][0]
-        assert seg["key"].startswith("segments/")
-        assert seg["key"].endswith(".wav")
-        assert "SPEAKER_00" in seg["key"]
-        assert seg["speaker"] == "SPEAKER_00"
-        assert seg["start"] == 0.0
-        assert seg["end"] == 5.0
+        # 返却値は軽量（segment_filesは含まれない）
+        assert result["segment_count"] == 900
+        assert "segment_files" not in result
+        # 返却値のサイズが小さいことを確認
+        result_json = json.dumps(result)
+        assert len(result_json) < 1000  # 1KB未満
 
     def test_split_audio_calls_ffmpeg_correctly(
         self, mock_subprocess: MagicMock, tmp_path: Path

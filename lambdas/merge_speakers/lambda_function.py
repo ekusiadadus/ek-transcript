@@ -218,14 +218,16 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     non_empty_chunks = [r for r in chunk_results if r.get("segments")]
     if not non_empty_chunks:
         logger.warning("All chunks are empty (no segments)")
-        return {
+        # Step Functionsにはメタデータのみ返す（ペイロード削減）
+        result = {
             "bucket": bucket,
             "audio_key": audio_key,
             "segments_key": None,
-            "segments": [],
-            "speaker_mapping": {},
             "global_speaker_count": 0,
         }
+        if interview_id:
+            result["interview_id"] = interview_id
+        return result
 
     # 話者クラスタリング
     logger.info("Clustering speakers across chunks...")
@@ -272,12 +274,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         ContentType="application/json",
     )
 
+    # Step Functionsにはメタデータのみ返す（ペイロード削減）
+    # segmentsとspeaker_mappingはS3に保存済み（States.DataLimitExceeded対策）
     result = {
         "bucket": output_bucket,
         "audio_key": audio_key,
         "segments_key": segments_key,
-        "segments": final_segments,
-        "speaker_mapping": speaker_mapping,
         "global_speaker_count": global_speaker_count,
     }
     # interview_id を次のステップに渡す

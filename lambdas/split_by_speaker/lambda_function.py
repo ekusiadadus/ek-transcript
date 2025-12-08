@@ -78,9 +78,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         context: Lambda コンテキスト
 
     Returns:
-        処理結果
+        処理結果（ペイロード削減のためメタデータのみ）
             - bucket: 出力バケット名
-            - segment_files: セグメントファイルのリスト
+            - segment_files_key: セグメントファイル情報のS3キー
+            - segment_count: セグメント数
+            - audio_key: 元の音声ファイルのキー
+        ※ segment_filesはS3に保存（States.DataLimitExceeded対策）
     """
     logger.info(f"Event: {event}")
 
@@ -146,9 +149,22 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
         logger.info(f"Created {len(segment_files)} segment files")
 
+        # segment_filesをS3に保存（States.DataLimitExceeded対策）
+        segment_files_key = f"metadata/{base_key}_segment_files.json"
+        logger.info(f"Saving segment_files to s3://{output_bucket}/{segment_files_key}")
+        s3.put_object(
+            Bucket=output_bucket,
+            Key=segment_files_key,
+            Body=json.dumps(segment_files, ensure_ascii=False),
+            ContentType="application/json",
+        )
+
+        # Step Functionsにはメタデータとキーのみ返す（ペイロード削減）
         result = {
             "bucket": output_bucket,
-            "segment_files": segment_files,
+            "segment_files_key": segment_files_key,
+            "segment_count": len(segment_files),
+            "audio_key": audio_key,
         }
         # interview_id を次のステップに渡す
         if interview_id:

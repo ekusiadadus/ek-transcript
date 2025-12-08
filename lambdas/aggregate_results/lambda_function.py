@@ -3,8 +3,10 @@ AggregateResults Lambda Function
 
 文字起こし結果を統合して1つのJSONファイルにまとめる。
 
-Version: 3.0 - States.DataLimitExceeded対策
-- S3から各結果ファイルを読み込んで統合
+Version: 4.0 - States.DataLimitExceeded対策（完全版）
+- segment_files_keyからセグメント情報を取得
+- 各セグメントに対応するtranscribe_resultsをS3から読み込み
+- Map stateの結果は使用しない（256KB制限対策）
 """
 
 import json
@@ -34,8 +36,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     Args:
         event: Lambda イベント
             - bucket: S3 バケット名
-            - transcription_results: 文字起こし結果のメタデータリスト
-                各要素: {result_key, speaker, start, end}
+            - segment_files_key: セグメントファイル情報のS3キー
             - audio_key: 元の音声ファイルのキー
         context: Lambda コンテキスト
 
@@ -53,32 +54,40 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         update_progress(interview_id, "aggregating_results")
 
     bucket = event["bucket"]
-    transcription_results = event["transcription_results"]
+    segment_files_key = event["segment_files_key"]
     audio_key = event.get("audio_key", "unknown")
 
-    logger.info(f"Loading {len(transcription_results)} transcription results from S3")
+    # S3からsegment_filesを読み込み
+    logger.info(f"Loading segment_files from s3://{bucket}/{segment_files_key}")
+    response = s3.get_object(Bucket=bucket, Key=segment_files_key)
+    segment_files = json.loads(response["Body"].read().decode("utf-8"))
 
-    # S3から各結果ファイルを読み込み（States.DataLimitExceeded対策）
+    logger.info(f"Loading {len(segment_files)} transcription results from S3")
+
+    # 各セグメントに対応するtranscribe_resultsを読み込み
     full_results = []
-    for i, result_meta in enumerate(transcription_results):
-        result_key = result_meta["result_key"]
-        result_bucket = result_meta.get("bucket", bucket)
+    for i, segment_file in enumerate(segment_files):
+        # セグメントキーからtranscribe_resultキーを生成
+        # segments/xxx_0000_SPEAKER_00.wav -> transcribe_results/xxx_0000_SPEAKER_00.json
+        segment_key = segment_file["key"]
+        segment_name = segment_key.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        result_key = f"transcribe_results/{segment_name}.json"
 
         try:
-            response = s3.get_object(Bucket=result_bucket, Key=result_key)
+            response = s3.get_object(Bucket=bucket, Key=result_key)
             result_data = json.loads(response["Body"].read().decode("utf-8"))
             full_results.append(result_data)
 
             if i % 100 == 0:
-                logger.info(f"Loaded {i + 1}/{len(transcription_results)} results")
+                logger.info(f"Loaded {i + 1}/{len(segment_files)} results")
 
         except Exception as e:
             logger.error(f"Failed to load {result_key}: {e}")
-            # メタデータから最低限の情報を復元
+            # segment_fileから最低限の情報を復元
             full_results.append({
-                "speaker": result_meta.get("speaker", "UNKNOWN"),
-                "start": result_meta.get("start", 0),
-                "end": result_meta.get("end", 0),
+                "speaker": segment_file.get("speaker", "UNKNOWN"),
+                "start": segment_file.get("start", 0),
+                "end": segment_file.get("end", 0),
                 "text": "[読み込みエラー]",
             })
 

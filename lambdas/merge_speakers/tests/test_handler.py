@@ -10,10 +10,16 @@ import json
 import sys
 from collections.abc import Generator
 from pathlib import Path
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+
+# progress モジュールのモック（Lambda 実行環境でのみ存在）
+mock_progress = ModuleType("progress")
+mock_progress.update_progress = MagicMock()  # type: ignore
+sys.modules["progress"] = mock_progress
 
 # このLambdaのlambda_function.pyを動的にインポート
 LAMBDA_DIR = Path(__file__).parent.parent
@@ -244,7 +250,11 @@ class TestResolveOverlaps:
 
 
 class TestLambdaHandler:
-    """Lambda ハンドラーのテスト"""
+    """Lambda ハンドラーのテスト
+
+    修正: States.DataLimitExceeded対策
+    - segmentsは返却値に含まれない（S3に保存済み）
+    """
 
     @pytest.fixture
     def mock_s3(self) -> Generator[MagicMock, None, None]:
@@ -301,7 +311,7 @@ class TestLambdaHandler:
         mock_s3: MagicMock,
         mock_load_chunk_results: MagicMock,
     ) -> None:
-        """正常系: 話者統合が成功"""
+        """正常系: 話者統合が成功（segmentsはS3に保存、返却値には含まれない）"""
         event = {
             "bucket": "test-bucket",
             "audio_key": "processed/test.wav",
@@ -320,8 +330,8 @@ class TestLambdaHandler:
 
         assert result["bucket"] == "test-bucket"
         assert "segments_key" in result
-        assert "segments" in result
-        assert "speaker_mapping" in result
+        # segmentsは返却値に含まれない（ペイロード削減）
+        assert "segments" not in result
         assert "global_speaker_count" in result
 
     def test_lambda_handler_saves_segments(
@@ -379,7 +389,8 @@ class TestLambdaHandler:
             result = lambda_module.lambda_handler(event, context)
 
             assert result["global_speaker_count"] == 0
-            assert result["segments"] == []
+            # segmentsは返却値に含まれない
+            assert "segments" not in result
 
 
 class TestGlobalTimestampConversion:
@@ -426,9 +437,14 @@ class TestGlobalTimestampConversion:
 
             result = lambda_module.lambda_handler(event, context)
 
+            # segmentsはS3に保存されるため、put_objectで検証
+            mock_s3.put_object.assert_called_once()
+            call_kwargs = mock_s3.put_object.call_args.kwargs
+            saved_segments = json.loads(call_kwargs["Body"])
+
             # ローカルタイムスタンプ 35.0〜45.0 + オフセット 450.0 = 485.0〜495.0
-            assert result["segments"][0]["start"] == 485.0
-            assert result["segments"][0]["end"] == 495.0
+            assert saved_segments[0]["start"] == 485.0
+            assert saved_segments[0]["end"] == 495.0
 
 
 class TestIntegration:
