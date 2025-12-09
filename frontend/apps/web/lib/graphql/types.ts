@@ -377,3 +377,12 @@ export interface SyncMeetRecordingsResponse {
 export interface AnalyzeRecordingResponse {
   analyzeRecording: Recording;
 }
+
+export interface RecordingsConnection {
+  items: Recording[];
+  nextToken?: string | null;
+}
+
+export interface ListRecordingsResponse {
+  listRecordings: RecordingsConnection;
+}

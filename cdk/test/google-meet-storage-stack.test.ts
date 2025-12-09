@@ -198,14 +198,18 @@ describe("GoogleMeetStorageStack", () => {
       template.hasOutput("SubscriptionsTableName", {});
     });
 
+    test("exports RecordingsTable name", () => {
+      template.hasOutput("RecordingsTableName", {});
+    });
+
     test("exports TokenEncryptionKey ARN", () => {
       template.hasOutput("TokenEncryptionKeyArn", {});
     });
   });
 
   describe("Table count", () => {
-    test("creates exactly 3 DynamoDB tables", () => {
-      template.resourceCountIs("AWS::DynamoDB::Table", 3);
+    test("creates exactly 4 DynamoDB tables", () => {
+      template.resourceCountIs("AWS::DynamoDB::Table", 4);
     });
   });
 });

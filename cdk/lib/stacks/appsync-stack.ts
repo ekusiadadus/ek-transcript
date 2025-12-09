@@ -310,6 +310,16 @@ export class AppSyncStack extends cdk.Stack {
         runtime: appsync.FunctionRuntime.JS_1_0_0,
         code: appsync.Code.fromAsset(path.join(resolversPath, "analyzeRecording.js")),
       });
+
+      // listRecordings resolver (キャッシュから高速取得)
+      new appsync.Resolver(this, "ListRecordingsResolver", {
+        api: this.graphqlApi,
+        typeName: "Query",
+        fieldName: "listRecordings",
+        dataSource: calendarSyncDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "listRecordings.js")),
+      });
     }
 
     // Google Auth Lambda resolvers

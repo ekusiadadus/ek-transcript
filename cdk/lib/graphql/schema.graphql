@@ -103,6 +103,19 @@ type Query {
   # Google 接続状態確認
   getGoogleConnectionStatus: GoogleConnectionStatus
     @aws_cognito_user_pools
+
+  # ========================================
+  # Recordings Cache Queries
+  # ========================================
+
+  # 録画一覧取得（キャッシュから高速取得）
+  listRecordings(status: RecordingStatus): RecordingsConnection
+    @aws_cognito_user_pools
+}
+
+type RecordingsConnection @aws_cognito_user_pools {
+  items: [Recording!]!
+  nextToken: String
 }
 
 type Mutation {

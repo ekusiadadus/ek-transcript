@@ -4,12 +4,14 @@ Google OAuth トークン管理
 トークンの取得、復号化、更新を担当する共有モジュール。
 複数の Lambda 関数から利用される。
 
-Version: 1.1 - Fixed DynamoDB Decimal conversion
+Version: 1.2 - Use Secrets Manager for OAuth credentials
 """
 
+import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Optional
 
 import boto3
@@ -22,12 +24,47 @@ logger = logging.getLogger(__name__)
 # AWS クライアント
 dynamodb = boto3.resource("dynamodb")
 kms = boto3.client("kms")
+secretsmanager = boto3.client("secretsmanager")
 
 # 環境変数
 TOKENS_TABLE = os.environ.get("TOKENS_TABLE", "")
 KMS_KEY_ID = os.environ.get("KMS_KEY_ID", "")
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_OAUTH_SECRET_ARN = os.environ.get("GOOGLE_OAUTH_SECRET_ARN", "")
+
+# キャッシュされた認証情報
+_cached_oauth_credentials: Optional[tuple] = None
+
+
+def _get_google_oauth_credentials() -> tuple[str, str]:
+    """
+    Secrets Manager から Google OAuth 認証情報を取得（キャッシュ付き）
+
+    Returns:
+        tuple: (client_id, client_secret)
+    """
+    global _cached_oauth_credentials
+
+    # キャッシュがあれば使用
+    if _cached_oauth_credentials is not None:
+        return _cached_oauth_credentials
+
+    if not GOOGLE_OAUTH_SECRET_ARN:
+        raise ValueError("GOOGLE_OAUTH_SECRET_ARN environment variable is not set")
+
+    logger.info("Fetching Google OAuth credentials from Secrets Manager")
+    response = secretsmanager.get_secret_value(SecretId=GOOGLE_OAUTH_SECRET_ARN)
+    secret = json.loads(response["SecretString"])
+
+    client_id = secret.get("client_id", "")
+    client_secret = secret.get("client_secret", "")
+
+    if not client_id or not client_secret:
+        raise ValueError("Google OAuth credentials not found in secret")
+
+    # キャッシュに保存
+    _cached_oauth_credentials = (client_id, client_secret)
+
+    return client_id, client_secret
 
 
 class TokenNotFoundError(Exception):
@@ -152,13 +189,16 @@ def get_valid_credentials(user_id: str) -> Credentials:
     if item.get("refresh_token"):
         refresh_token = decrypt_token(item["refresh_token"])
 
+    # Secrets Manager から OAuth 認証情報を取得
+    client_id, client_secret = _get_google_oauth_credentials()
+
     # Credentials オブジェクト作成
     credentials = Credentials(
         token=access_token,
         refresh_token=refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
+        client_id=client_id,
+        client_secret=client_secret,
         scopes=item.get("scopes", []),
     )
 

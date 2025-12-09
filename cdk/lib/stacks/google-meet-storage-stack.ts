@@ -21,6 +21,7 @@ export class GoogleMeetStorageStack extends cdk.Stack {
   public readonly meetingsTable: dynamodb.Table;
   public readonly googleTokensTable: dynamodb.Table;
   public readonly subscriptionsTable: dynamodb.Table;
+  public readonly recordingsTable: dynamodb.Table;
   public readonly tokenEncryptionKey: kms.Key;
   public readonly googleOAuthSecret: secretsmanager.Secret;
 
@@ -139,6 +140,50 @@ export class GoogleMeetStorageStack extends cdk.Stack {
     });
 
     // ========================================
+    // Recordings Table (録画キャッシュ)
+    // ========================================
+    this.recordingsTable = new dynamodb.Table(this, "RecordingsTable", {
+      tableName: `ek-transcript-recordings-${environment}`,
+      partitionKey: {
+        name: "user_id",
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: "recording_name",
+        type: dynamodb.AttributeType.STRING,
+      },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy:
+        environment === "prod"
+          ? cdk.RemovalPolicy.RETAIN
+          : cdk.RemovalPolicy.DESTROY,
+    });
+
+    // GSI: drive_file_id (Drive ファイル ID からの検索用)
+    this.recordingsTable.addGlobalSecondaryIndex({
+      indexName: "drive_file_id-index",
+      partitionKey: {
+        name: "drive_file_id",
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // GSI: status (ステータスでの検索用)
+    this.recordingsTable.addGlobalSecondaryIndex({
+      indexName: "user_id-status-index",
+      partitionKey: {
+        name: "user_id",
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: "status",
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // ========================================
     // Outputs
     // ========================================
     new cdk.CfnOutput(this, "MeetingsTableName", {
@@ -179,6 +224,16 @@ export class GoogleMeetStorageStack extends cdk.Stack {
     new cdk.CfnOutput(this, "GoogleOAuthSecretArn", {
       value: this.googleOAuthSecret.secretArn,
       exportName: `${id}-GoogleOAuthSecretArn`,
+    });
+
+    new cdk.CfnOutput(this, "RecordingsTableName", {
+      value: this.recordingsTable.tableName,
+      exportName: `${id}-RecordingsTableName`,
+    });
+
+    new cdk.CfnOutput(this, "RecordingsTableArn", {
+      value: this.recordingsTable.tableArn,
+      exportName: `${id}-RecordingsTableArn`,
     });
   }
 }

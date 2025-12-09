@@ -28,12 +28,15 @@ import type {
   DeleteMeetingResponse,
   SyncCalendarResponse,
   Recording,
+  RecordingStatus,
   RecordingSyncResult,
+  RecordingsConnection,
   SyncMeetRecordingsInput,
   SyncMeetRecordingsResponse,
   AnalyzeRecordingResponse,
+  ListRecordingsResponse,
 } from "./types";
-import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT, GET_UPLOAD_URL, GET_VIDEO_URL, GET_MEETING, LIST_MEETINGS } from "./queries";
+import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT, GET_UPLOAD_URL, GET_VIDEO_URL, GET_MEETING, LIST_MEETINGS, LIST_RECORDINGS } from "./queries";
 import { UPDATE_INTERVIEW, DELETE_INTERVIEW, CREATE_MEETING, UPDATE_MEETING, DELETE_MEETING, SYNC_CALENDAR, SYNC_MEET_RECORDINGS, ANALYZE_RECORDING } from "./mutations";
 
 const client = generateClient();
@@ -233,4 +236,13 @@ export async function analyzeRecording(driveFileId: string, recordingName: strin
     throw new Error("Failed to analyze recording");
   }
   return response.data.analyzeRecording;
+}
+
+// 録画一覧取得（キャッシュから高速取得）
+export async function listRecordings(status?: RecordingStatus): Promise<RecordingsConnection> {
+  const response = await client.graphql({
+    query: LIST_RECORDINGS,
+    variables: { status },
+  }) as GraphQLResult<ListRecordingsResponse>;
+  return response.data?.listRecordings ?? { items: [], nextToken: null };
 }

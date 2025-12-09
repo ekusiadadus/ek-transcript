@@ -15,6 +15,7 @@ describe("GoogleMeetLambdaStack", () => {
   let meetingsTable: dynamodb.Table;
   let tokensTable: dynamodb.Table;
   let subscriptionsTable: dynamodb.Table;
+  let recordingsTable: dynamodb.Table;
   let tokenEncryptionKey: kms.Key;
   let recordingsBucket: s3.Bucket;
   let googleOAuthSecret: secretsmanager.Secret;
@@ -53,6 +54,12 @@ describe("GoogleMeetLambdaStack", () => {
       }
     );
 
+    recordingsTable = new dynamodb.Table(mockStack, "MockRecordingsTable", {
+      tableName: "mock-recordings-table",
+      partitionKey: { name: "user_id", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "recording_name", type: dynamodb.AttributeType.STRING },
+    });
+
     tokenEncryptionKey = new kms.Key(mockStack, "MockKmsKey", {
       description: "Mock KMS Key",
     });
@@ -70,6 +77,7 @@ describe("GoogleMeetLambdaStack", () => {
       meetingsTable,
       tokensTable,
       subscriptionsTable,
+      recordingsTable,
       tokenEncryptionKey,
       recordingsBucket,
       googleOAuthSecret,

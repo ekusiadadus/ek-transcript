@@ -34,6 +34,7 @@ s3_client = boto3.client("s3")
 
 # 環境変数
 MEETINGS_TABLE = os.environ.get("MEETINGS_TABLE", "")
+RECORDINGS_TABLE = os.environ.get("RECORDINGS_TABLE", "")
 RECORDINGS_BUCKET = os.environ.get("RECORDINGS_BUCKET", "")
 
 
@@ -391,6 +392,90 @@ def list_conference_recordings(user_id: str, conference_record_name: str) -> lis
     return all_recordings
 
 
+def get_cached_recordings(user_id: str) -> list:
+    """
+    DynamoDB から録画キャッシュを取得
+
+    Args:
+        user_id: ユーザー ID
+
+    Returns:
+        キャッシュされた録画のリスト
+    """
+    if not RECORDINGS_TABLE:
+        return []
+
+    table = dynamodb.Table(RECORDINGS_TABLE)
+
+    try:
+        response = table.query(
+            KeyConditionExpression="user_id = :uid",
+            ExpressionAttributeValues={":uid": user_id},
+        )
+        return response.get("Items", [])
+    except Exception as e:
+        logger.warning(f"Failed to get cached recordings: {e}")
+        return []
+
+
+def save_recording_to_cache(user_id: str, recording: dict) -> None:
+    """
+    録画を DynamoDB キャッシュに保存
+
+    Args:
+        user_id: ユーザー ID
+        recording: 録画情報
+    """
+    if not RECORDINGS_TABLE:
+        return
+
+    table = dynamodb.Table(RECORDINGS_TABLE)
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    item = {
+        "user_id": user_id,
+        "recording_name": recording["recording_name"],
+        "conference_record": recording.get("conference_record"),
+        "space": recording.get("space"),
+        "start_time": recording.get("start_time"),
+        "end_time": recording.get("end_time"),
+        "drive_file_id": recording["drive_file_id"],
+        "export_uri": recording.get("export_uri"),
+        "status": recording.get("status", "PENDING"),
+        "meeting_id": recording.get("meeting_id"),
+        "interview_id": recording.get("interview_id"),
+        "created_at": now_iso,
+        "updated_at": now_iso,
+    }
+
+    table.put_item(Item=item)
+    logger.info(f"Saved recording to cache: {recording['recording_name']}")
+
+
+def list_recordings(user_id: str, status: str = None) -> list:
+    """
+    キャッシュから録画一覧を取得（高速）
+
+    Args:
+        user_id: ユーザー ID
+        status: フィルタするステータス（オプション）
+
+    Returns:
+        録画のリスト
+    """
+    logger.info(f"Listing recordings from cache for user: {user_id}")
+
+    cached = get_cached_recordings(user_id)
+
+    if status:
+        cached = [r for r in cached if r.get("status") == status]
+
+    # start_time でソート（新しい順）
+    cached.sort(key=lambda x: x.get("start_time", ""), reverse=True)
+
+    return cached
+
+
 def sync_meet_recordings(user_id: str, days_back: int = 30) -> dict:
     """
     Google Meet REST API v2 を使用して録画を同期
@@ -404,6 +489,10 @@ def sync_meet_recordings(user_id: str, days_back: int = 30) -> dict:
     """
     logger.info(f"Syncing Meet recordings for user: {user_id}, days_back: {days_back}")
 
+    # 既存のキャッシュを取得
+    cached_recordings = get_cached_recordings(user_id)
+    cached_drive_ids = {r.get("drive_file_id") for r in cached_recordings}
+
     # 検索期間
     start_time = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
 
@@ -411,7 +500,7 @@ def sync_meet_recordings(user_id: str, days_back: int = 30) -> dict:
     conference_records = list_conference_records(user_id, start_time=start_time)
 
     recordings_found = []
-    recordings_downloaded = []
+    recordings_new = []
 
     for record in conference_records:
         record_name = record.get("name")
@@ -436,7 +525,7 @@ def sync_meet_recordings(user_id: str, days_back: int = 30) -> dict:
                 logger.warning(f"No file ID for recording: {recording.get('name')}")
                 continue
 
-            recordings_found.append({
+            recording_data = {
                 "recording_name": recording.get("name"),
                 "conference_record": record_name,
                 "space": space_name,
@@ -444,14 +533,27 @@ def sync_meet_recordings(user_id: str, days_back: int = 30) -> dict:
                 "end_time": recording.get("endTime"),
                 "drive_file_id": file_id,
                 "export_uri": export_uri,
-            })
+                "status": "PENDING",
+            }
 
-    logger.info(f"Found {len(recordings_found)} recordings with files")
+            recordings_found.append(recording_data)
+
+            # 新規録画の場合はキャッシュに保存
+            if file_id not in cached_drive_ids:
+                save_recording_to_cache(user_id, recording_data)
+                recordings_new.append(recording_data)
+                logger.info(f"New recording found: {recording.get('name')}")
+
+    logger.info(f"Found {len(recordings_found)} recordings, {len(recordings_new)} new")
+
+    # 全録画リストを返す（キャッシュ含む）
+    all_recordings = list_recordings(user_id)
 
     return {
+        "success": True,
         "conference_records_count": len(conference_records),
-        "recordings_found": recordings_found,
-        "recordings_downloaded": recordings_downloaded,
+        "recordings_found": all_recordings,
+        "recordings_downloaded": [],
     }
 
 
@@ -583,6 +685,7 @@ def lambda_handler(event: dict, context) -> dict:
     - create_event: Meet リンク付きイベント作成
     - sync_events: Meetings テーブルと同期
     - sync_meet_recordings: Meet REST API v2 で録画を同期
+    - list_recordings: キャッシュから録画一覧を取得（高速）
     - list_conference_records: 会議記録一覧を取得
     """
     action = event.get("action")
@@ -646,6 +749,16 @@ def lambda_handler(event: dict, context) -> dict:
                 "conference_records_count": result["conference_records_count"],
                 "recordings_found": result["recordings_found"],
                 "recordings_downloaded": result["recordings_downloaded"],
+            }
+
+        elif action == "list_recordings":
+            # キャッシュから高速に取得
+            status = event.get("status")
+            recordings = list_recordings(user_id, status)
+
+            return {
+                "success": True,
+                "recordings": recordings,
             }
 
         elif action == "list_conference_records":

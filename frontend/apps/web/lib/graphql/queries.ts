@@ -165,3 +165,24 @@ export const GET_GOOGLE_CONNECTION_STATUS = /* GraphQL */ `
     }
   }
 `;
+
+// Recordings cache query (高速取得)
+export const LIST_RECORDINGS = /* GraphQL */ `
+  query ListRecordings($status: RecordingStatus) {
+    listRecordings(status: $status) {
+      items {
+        recording_name
+        conference_record
+        space
+        start_time
+        end_time
+        drive_file_id
+        export_uri
+        status
+        meeting_id
+        interview_id
+      }
+      nextToken
+    }
+  }
+`;

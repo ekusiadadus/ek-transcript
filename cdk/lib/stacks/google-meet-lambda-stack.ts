@@ -13,6 +13,7 @@ export interface GoogleMeetLambdaStackProps extends cdk.StackProps {
   meetingsTable: dynamodb.ITable;
   tokensTable: dynamodb.ITable;
   subscriptionsTable: dynamodb.ITable;
+  recordingsTable: dynamodb.ITable;
   tokenEncryptionKey: kms.IKey;
   recordingsBucket: s3.IBucket;
   googleOAuthSecret: secretsmanager.ISecret;
@@ -43,6 +44,7 @@ export class GoogleMeetLambdaStack extends cdk.Stack {
       meetingsTable,
       tokensTable,
       subscriptionsTable,
+      recordingsTable,
       tokenEncryptionKey,
       recordingsBucket,
       googleOAuthSecret,
@@ -95,6 +97,7 @@ export class GoogleMeetLambdaStack extends cdk.Stack {
       MEETINGS_TABLE: meetingsTable.tableName,
       TOKENS_TABLE: tokensTable.tableName,
       SUBSCRIPTIONS_TABLE: subscriptionsTable.tableName,
+      RECORDINGS_TABLE: recordingsTable.tableName,
       KMS_KEY_ID: tokenEncryptionKey.keyId,
       GOOGLE_OAUTH_SECRET_ARN: googleOAuthSecret.secretArn,
     };
@@ -220,6 +223,9 @@ export class GoogleMeetLambdaStack extends cdk.Stack {
 
       // Tokens table
       tokensTable.grantReadWriteData(fn);
+
+      // Recordings table
+      recordingsTable.grantReadWriteData(fn);
 
       // KMS key for encryption/decryption
       tokenEncryptionKey.grantEncryptDecrypt(fn);

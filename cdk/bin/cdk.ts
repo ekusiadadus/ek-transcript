@@ -92,6 +92,7 @@ const googleMeetLambdaStack = new GoogleMeetLambdaStack(
     meetingsTable: googleMeetStorageStack.meetingsTable,
     tokensTable: googleMeetStorageStack.googleTokensTable,
     subscriptionsTable: googleMeetStorageStack.subscriptionsTable,
+    recordingsTable: googleMeetStorageStack.recordingsTable,
     tokenEncryptionKey: googleMeetStorageStack.tokenEncryptionKey,
     recordingsBucket: storageStack.inputBucket,
     googleOAuthSecret: googleMeetStorageStack.googleOAuthSecret,
