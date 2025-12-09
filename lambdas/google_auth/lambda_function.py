@@ -60,6 +60,7 @@ def _get_google_oauth_credentials() -> tuple[str, str]:
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/meetings.space.settings",  # 自動録画設定用
     "https://www.googleapis.com/auth/meetings.space.readonly",  # 会議記録・録画取得用
     "https://www.googleapis.com/auth/drive.readonly",  # 録画ファイルダウンロード用
     "https://www.googleapis.com/auth/userinfo.email",
