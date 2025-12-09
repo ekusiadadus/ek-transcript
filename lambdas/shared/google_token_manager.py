@@ -4,7 +4,7 @@ Google OAuth トークン管理
 トークンの取得、復号化、更新を担当する共有モジュール。
 複数の Lambda 関数から利用される。
 
-Version: 1.0
+Version: 1.1 - Fixed DynamoDB Decimal conversion
 """
 
 import logging

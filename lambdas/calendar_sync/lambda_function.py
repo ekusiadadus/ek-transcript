@@ -3,8 +3,9 @@ Calendar Sync Lambda
 
 Google Calendar イベントの取得・同期・作成を担当。
 Meet リンク付きイベントを管理する。
+Google Meet REST API v2 で録画を取得する。
 
-Version: 1.0
+Version: 1.2 - Added Google Meet REST API v2 for recordings
 """
 
 import json
@@ -13,9 +14,11 @@ import os
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 
 import boto3
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 # 共有モジュールのパスを追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "shared"))
@@ -27,9 +30,11 @@ logger.setLevel(logging.INFO)
 
 # AWS クライアント
 dynamodb = boto3.resource("dynamodb")
+s3_client = boto3.client("s3")
 
 # 環境変数
 MEETINGS_TABLE = os.environ.get("MEETINGS_TABLE", "")
+RECORDINGS_BUCKET = os.environ.get("RECORDINGS_BUCKET", "")
 
 
 def list_events(
@@ -177,21 +182,298 @@ def create_event(
     return event
 
 
-def sync_events(user_id: str, days_ahead: int = 30) -> dict:
+def search_drive_recordings(user_id: str, days_back: int = 30) -> list:
+    """
+    Google Drive から Meet 録画ファイルを検索
+
+    Args:
+        user_id: ユーザー ID
+        days_back: 何日前まで検索するか
+
+    Returns:
+        録画ファイルのリスト
+    """
+    logger.info(f"Searching Drive recordings for user: {user_id}, days_back: {days_back}")
+
+    credentials = get_valid_credentials(user_id)
+    service = build("drive", "v3", credentials=credentials)
+
+    # 検索期間
+    date_after = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+
+    # Meet 録画ファイルを検索（動画ファイルで "Meet" または "Recording" を含む）
+    query = f"(mimeType contains 'video/' or name contains 'Recording') and modifiedTime > '{date_after}'"
+
+    recordings = []
+    page_token = None
+
+    while True:
+        response = service.files().list(
+            q=query,
+            spaces="drive",
+            fields="nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink)",
+            pageToken=page_token,
+            pageSize=100,
+        ).execute()
+
+        files = response.get("files", [])
+        recordings.extend(files)
+
+        page_token = response.get("nextPageToken")
+        if not page_token:
+            break
+
+    logger.info(f"Found {len(recordings)} recording files in Drive")
+    return recordings
+
+
+def download_recording_from_drive(user_id: str, file_id: str) -> tuple[bytes, dict]:
+    """
+    Google Drive から録画ファイルをダウンロード
+
+    Args:
+        user_id: ユーザー ID
+        file_id: Drive ファイル ID
+
+    Returns:
+        (ファイル内容, メタデータ)
+    """
+    logger.info(f"Downloading recording from Drive: {file_id}")
+
+    credentials = get_valid_credentials(user_id)
+    service = build("drive", "v3", credentials=credentials)
+
+    # メタデータ取得
+    metadata = service.files().get(
+        fileId=file_id,
+        fields="id, name, mimeType, size, createdTime"
+    ).execute()
+
+    logger.info(f"Downloading: {metadata.get('name')} ({metadata.get('size')} bytes)")
+
+    # ファイルダウンロード
+    request = service.files().get_media(fileId=file_id)
+    file_buffer = BytesIO()
+    downloader = MediaIoBaseDownload(file_buffer, request)
+
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+        if status:
+            logger.info(f"Download progress: {int(status.progress() * 100)}%")
+
+    file_buffer.seek(0)
+    return file_buffer.read(), metadata
+
+
+def upload_recording_to_s3(
+    content: bytes,
+    user_id: str,
+    meeting_id: str,
+    file_name: str,
+    content_type: str = "video/mp4"
+) -> str:
+    """
+    録画ファイルを S3 にアップロード
+
+    Args:
+        content: ファイル内容
+        user_id: ユーザー ID
+        meeting_id: ミーティング ID
+        file_name: ファイル名
+        content_type: コンテンツタイプ
+
+    Returns:
+        S3 キー
+    """
+    s3_key = f"recordings/{user_id}/{meeting_id}/{file_name}"
+    logger.info(f"Uploading to S3: s3://{RECORDINGS_BUCKET}/{s3_key}")
+
+    file_buffer = BytesIO(content)
+    s3_client.upload_fileobj(
+        file_buffer,
+        RECORDINGS_BUCKET,
+        s3_key,
+        ExtraArgs={"ContentType": content_type},
+    )
+
+    return s3_key
+
+
+def list_conference_records(
+    user_id: str,
+    start_time: str = None,
+    end_time: str = None,
+    page_size: int = 100,
+) -> list:
+    """
+    Google Meet REST API v2 で会議記録を取得
+
+    Args:
+        user_id: ユーザー ID
+        start_time: 開始日時（RFC3339形式）
+        end_time: 終了日時（RFC3339形式）
+        page_size: 1ページあたりの最大件数
+
+    Returns:
+        会議記録のリスト
+    """
+    logger.info(f"Listing conference records for user: {user_id}")
+
+    credentials = get_valid_credentials(user_id)
+    service = build("meet", "v2", credentials=credentials)
+
+    all_records = []
+    page_token = None
+
+    # フィルター構築
+    filter_parts = []
+    if start_time:
+        filter_parts.append(f'start_time>="{start_time}"')
+    if end_time:
+        filter_parts.append(f'end_time<="{end_time}"')
+    filter_str = " AND ".join(filter_parts) if filter_parts else None
+
+    while True:
+        request_params = {"pageSize": page_size}
+        if filter_str:
+            request_params["filter"] = filter_str
+        if page_token:
+            request_params["pageToken"] = page_token
+
+        response = service.conferenceRecords().list(**request_params).execute()
+
+        records = response.get("conferenceRecords", [])
+        all_records.extend(records)
+
+        page_token = response.get("nextPageToken")
+        if not page_token:
+            break
+
+    logger.info(f"Found {len(all_records)} conference records")
+    return all_records
+
+
+def list_conference_recordings(user_id: str, conference_record_name: str) -> list:
+    """
+    特定の会議の録画一覧を取得
+
+    Args:
+        user_id: ユーザー ID
+        conference_record_name: 会議記録名（例: conferenceRecords/xxx）
+
+    Returns:
+        録画のリスト
+    """
+    logger.info(f"Listing recordings for conference: {conference_record_name}")
+
+    credentials = get_valid_credentials(user_id)
+    service = build("meet", "v2", credentials=credentials)
+
+    all_recordings = []
+    page_token = None
+
+    while True:
+        request_params = {"parent": conference_record_name, "pageSize": 100}
+        if page_token:
+            request_params["pageToken"] = page_token
+
+        response = service.conferenceRecords().recordings().list(**request_params).execute()
+
+        recordings = response.get("recordings", [])
+        all_recordings.extend(recordings)
+
+        page_token = response.get("nextPageToken")
+        if not page_token:
+            break
+
+    logger.info(f"Found {len(all_recordings)} recordings for conference")
+    return all_recordings
+
+
+def sync_meet_recordings(user_id: str, days_back: int = 30) -> dict:
+    """
+    Google Meet REST API v2 を使用して録画を同期
+
+    Args:
+        user_id: ユーザー ID
+        days_back: 何日前まで検索するか
+
+    Returns:
+        同期結果
+    """
+    logger.info(f"Syncing Meet recordings for user: {user_id}, days_back: {days_back}")
+
+    # 検索期間
+    start_time = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+
+    # 会議記録を取得
+    conference_records = list_conference_records(user_id, start_time=start_time)
+
+    recordings_found = []
+    recordings_downloaded = []
+
+    for record in conference_records:
+        record_name = record.get("name")
+        space_name = record.get("space")  # spaces/xxx 形式
+
+        # この会議の録画を取得
+        recordings = list_conference_recordings(user_id, record_name)
+
+        for recording in recordings:
+            recording_state = recording.get("state")
+
+            # FILE_GENERATED 状態の録画のみ処理
+            if recording_state != "FILE_GENERATED":
+                logger.info(f"Skipping recording {recording.get('name')} - state: {recording_state}")
+                continue
+
+            drive_dest = recording.get("driveDestination", {})
+            file_id = drive_dest.get("file")
+            export_uri = drive_dest.get("exportUri")
+
+            if not file_id:
+                logger.warning(f"No file ID for recording: {recording.get('name')}")
+                continue
+
+            recordings_found.append({
+                "recording_name": recording.get("name"),
+                "conference_record": record_name,
+                "space": space_name,
+                "start_time": recording.get("startTime"),
+                "end_time": recording.get("endTime"),
+                "drive_file_id": file_id,
+                "export_uri": export_uri,
+            })
+
+    logger.info(f"Found {len(recordings_found)} recordings with files")
+
+    return {
+        "conference_records_count": len(conference_records),
+        "recordings_found": recordings_found,
+        "recordings_downloaded": recordings_downloaded,
+    }
+
+
+def sync_events(user_id: str, days_ahead: int = 30, days_back: int = 0) -> dict:
     """
     Google Calendar と Meetings テーブルを同期
 
     Args:
         user_id: ユーザー ID
         days_ahead: 何日先までを同期するか
+        days_back: 何日前まで同期するか (0 の場合は今日から)
 
     Returns:
         同期結果（GraphQL CalendarSyncResult 形式）
     """
-    logger.info(f"Syncing events for user: {user_id}")
+    logger.info(f"Syncing events for user: {user_id}, days_ahead: {days_ahead}, days_back: {days_back}")
 
     # Calendar からイベント取得
-    time_min = datetime.now(timezone.utc).isoformat()
+    if days_back > 0:
+        time_min = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
+    else:
+        time_min = datetime.now(timezone.utc).isoformat()
     time_max = (datetime.now(timezone.utc) + timedelta(days=days_ahead)).isoformat()
 
     result = list_events(user_id, time_min, time_max)
@@ -300,6 +582,8 @@ def lambda_handler(event: dict, context) -> dict:
     - get_event: イベント詳細取得
     - create_event: Meet リンク付きイベント作成
     - sync_events: Meetings テーブルと同期
+    - sync_meet_recordings: Meet REST API v2 で録画を同期
+    - list_conference_records: 会議記録一覧を取得
     """
     action = event.get("action")
     user_id = event.get("user_id")
@@ -342,7 +626,8 @@ def lambda_handler(event: dict, context) -> dict:
 
         elif action == "sync_events":
             days_ahead = event.get("days_ahead", 30)
-            result = sync_events(user_id, days_ahead)
+            days_back = event.get("days_back", 0)
+            result = sync_events(user_id, days_ahead, days_back)
 
             return {
                 "success": True,
@@ -350,6 +635,27 @@ def lambda_handler(event: dict, context) -> dict:
                 "new_meetings": result["new_meetings"],
                 "updated_meetings": result["updated_meetings"],
                 "error_message": None,
+            }
+
+        elif action == "sync_meet_recordings":
+            days_back = event.get("days_back", 30)
+            result = sync_meet_recordings(user_id, days_back)
+
+            return {
+                "success": True,
+                "conference_records_count": result["conference_records_count"],
+                "recordings_found": result["recordings_found"],
+                "recordings_downloaded": result["recordings_downloaded"],
+            }
+
+        elif action == "list_conference_records":
+            start_time = event.get("start_time")
+            end_time = event.get("end_time")
+            records = list_conference_records(user_id, start_time, end_time)
+
+            return {
+                "success": True,
+                "conference_records": records,
             }
 
         else:

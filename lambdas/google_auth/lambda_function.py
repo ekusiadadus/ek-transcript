@@ -55,13 +55,13 @@ def _get_google_oauth_credentials() -> tuple[str, str]:
 
     return client_id, client_secret
 
-# Google OAuth スコープ（最小権限）
+# Google OAuth スコープ
 # Note: openid is automatically added by Google, so we include it explicitly
 SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/meetings.space.settings",
-    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/meetings.space.readonly",  # 会議記録・録画取得用
+    "https://www.googleapis.com/auth/drive.readonly",  # 録画ファイルダウンロード用
     "https://www.googleapis.com/auth/userinfo.email",
 ]
 
