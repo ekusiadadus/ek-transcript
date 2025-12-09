@@ -323,7 +323,8 @@ def lambda_handler(event: dict, context) -> dict:
             expires_at_iso = None
             if tokens.get("expires_at"):
                 from datetime import datetime, timezone
-                expires_at = datetime.fromtimestamp(tokens["expires_at"], tz=timezone.utc)
+                # DynamoDB returns Decimal, convert to int for fromtimestamp
+                expires_at = datetime.fromtimestamp(int(tokens["expires_at"]), tz=timezone.utc)
                 is_expired = expires_at < datetime.now(timezone.utc)
                 expires_at_iso = expires_at.isoformat()
 
