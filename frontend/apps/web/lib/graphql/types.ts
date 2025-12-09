@@ -253,17 +253,21 @@ export interface UpdateMeetingInput {
   interview_id?: string | null;
 }
 
-export interface CalendarSyncInput {
+export interface SyncCalendarInput {
   start_date?: string | null;
   end_date?: string | null;
   max_results?: number | null;
 }
 
+// Keep alias for backward compatibility
+export type CalendarSyncInput = SyncCalendarInput;
+
 export interface CalendarSyncResult {
+  success: boolean;
   synced_count: number;
-  new_meetings: string[];
-  updated_meetings: string[];
-  errors?: string[] | null;
+  new_meetings?: Meeting[] | null;
+  updated_meetings?: Meeting[] | null;
+  error_message?: string | null;
 }
 
 export interface GetMeetingResponse {

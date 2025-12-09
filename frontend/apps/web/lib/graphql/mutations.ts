@@ -84,12 +84,27 @@ export const DELETE_MEETING = /* GraphQL */ `
 `;
 
 export const SYNC_CALENDAR = /* GraphQL */ `
-  mutation SyncCalendar($input: CalendarSyncInput) {
+  mutation SyncCalendar($input: SyncCalendarInput) {
     syncCalendar(input: $input) {
+      success
       synced_count
-      new_meetings
-      updated_meetings
-      errors
+      new_meetings {
+        meeting_id
+        title
+        start_time
+        end_time
+        status
+        google_meet_uri
+      }
+      updated_meetings {
+        meeting_id
+        title
+        start_time
+        end_time
+        status
+        google_meet_uri
+      }
+      error_message
     }
   }
 `;

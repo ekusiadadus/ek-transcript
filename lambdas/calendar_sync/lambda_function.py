@@ -186,7 +186,7 @@ def sync_events(user_id: str, days_ahead: int = 30) -> dict:
         days_ahead: 何日先までを同期するか
 
     Returns:
-        同期結果
+        同期結果（GraphQL CalendarSyncResult 形式）
     """
     logger.info(f"Syncing events for user: {user_id}")
 
@@ -209,10 +209,10 @@ def sync_events(user_id: str, days_ahead: int = 30) -> dict:
         KeyConditionExpression="user_id = :uid",
         ExpressionAttributeValues={":uid": user_id},
     )
-    existing_meetings = {m["calendar_event_id"]: m for m in existing_response.get("Items", [])}
+    existing_meetings = {m.get("google_calendar_event_id"): m for m in existing_response.get("Items", []) if m.get("google_calendar_event_id")}
 
-    created_count = 0
-    updated_count = 0
+    new_meetings = []
+    updated_meetings = []
 
     for event in meet_events:
         event_id = event["id"]
@@ -225,33 +225,41 @@ def sync_events(user_id: str, days_ahead: int = 30) -> dict:
                 meet_uri = entry.get("uri")
                 break
 
+        now_iso = datetime.now(timezone.utc).isoformat()
+
         meeting_data = {
             "user_id": user_id,
-            "calendar_event_id": event_id,
-            "meet_space_id": conference_data.get("conferenceId"),
-            "meet_uri": meet_uri,
+            "google_calendar_event_id": event_id,
+            "google_meet_space_id": conference_data.get("conferenceId"),
+            "google_meet_uri": meet_uri,
             "title": event.get("summary", "Untitled"),
             "description": event.get("description"),
             "start_time": event["start"].get("dateTime", event["start"].get("date")),
             "end_time": event["end"].get("dateTime", event["end"].get("date")),
-            "attendees": event.get("attendees", []),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "status": "SCHEDULED",
+            "updated_at": now_iso,
         }
 
         if event_id not in existing_meetings:
             # 新規作成
-            meeting_data["meeting_id"] = str(uuid.uuid4())
-            meeting_data["created_at"] = datetime.now(timezone.utc).isoformat()
-            meeting_data["recording_status"] = "PENDING"
-            meeting_data["auto_recording_enabled"] = True
-            meeting_data["auto_transcription_enabled"] = True
+            meeting_id = str(uuid.uuid4())
+            meeting_data["meeting_id"] = meeting_id
+            meeting_data["created_at"] = now_iso
+            meeting_data["auto_recording"] = True
+            meeting_data["auto_transcription"] = True
 
             table.put_item(Item=meeting_data)
-            created_count += 1
+            new_meetings.append(meeting_data)
             logger.info(f"Created meeting for event: {event_id}")
         else:
             # 更新
             existing = existing_meetings[event_id]
+            meeting_data["meeting_id"] = existing["meeting_id"]
+            meeting_data["created_at"] = existing.get("created_at", now_iso)
+            meeting_data["auto_recording"] = existing.get("auto_recording", True)
+            meeting_data["auto_transcription"] = existing.get("auto_transcription", True)
+            meeting_data["status"] = existing.get("status", "SCHEDULED")
+
             table.update_item(
                 Key={"meeting_id": existing["meeting_id"]},
                 UpdateExpression="""
@@ -259,7 +267,8 @@ def sync_events(user_id: str, days_ahead: int = 30) -> dict:
                         description = :desc,
                         start_time = :start,
                         end_time = :end,
-                        attendees = :att,
+                        google_meet_uri = :uri,
+                        google_meet_space_id = :space,
                         updated_at = :upd
                 """,
                 ExpressionAttributeValues={
@@ -267,17 +276,18 @@ def sync_events(user_id: str, days_ahead: int = 30) -> dict:
                     ":desc": meeting_data.get("description"),
                     ":start": meeting_data["start_time"],
                     ":end": meeting_data["end_time"],
-                    ":att": meeting_data["attendees"],
+                    ":uri": meeting_data.get("google_meet_uri"),
+                    ":space": meeting_data.get("google_meet_space_id"),
                     ":upd": meeting_data["updated_at"],
                 },
             )
-            updated_count += 1
+            updated_meetings.append(meeting_data)
             logger.info(f"Updated meeting for event: {event_id}")
 
     return {
         "synced_count": len(meet_events),
-        "created_count": created_count,
-        "updated_count": updated_count,
+        "new_meetings": new_meetings,
+        "updated_meetings": updated_meetings,
     }
 
 
@@ -337,8 +347,9 @@ def lambda_handler(event: dict, context) -> dict:
             return {
                 "success": True,
                 "synced_count": result["synced_count"],
-                "created_count": result["created_count"],
-                "updated_count": result["updated_count"],
+                "new_meetings": result["new_meetings"],
+                "updated_meetings": result["updated_meetings"],
+                "error_message": None,
             }
 
         else:

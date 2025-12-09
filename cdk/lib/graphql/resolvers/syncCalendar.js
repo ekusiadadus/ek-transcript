@@ -12,11 +12,11 @@ export function request(ctx) {
   return {
     operation: "Invoke",
     payload: {
-      action: "sync_calendar",
+      action: "sync_events",
       user_id: userId,
       start_date: input.start_date,
       end_date: input.end_date,
-      max_results: input.max_results || 50,
+      days_ahead: input.max_results || 30,
     },
   };
 }
