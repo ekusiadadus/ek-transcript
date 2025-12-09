@@ -12,6 +12,9 @@ export function request(ctx) {
   // CSRF 防止用の state を生成
   const state = util.autoId();
 
+  // state を stash に保存して response で使用
+  ctx.stash.state = state;
+
   return {
     operation: "Invoke",
     payload: {
@@ -34,8 +37,9 @@ export function response(ctx) {
     util.error(result.error, "GoogleAuthError");
   }
 
+  // stash に保存した state を返す（Lambda に送信した state と同じ）
   return {
     auth_url: result.auth_url,
-    state: ctx.args.state || result.state || util.autoId(),
+    state: ctx.stash.state,
   };
 }
