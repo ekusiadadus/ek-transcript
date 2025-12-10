@@ -8,6 +8,7 @@ import {
   createMeeting,
   syncCalendar,
   syncMeetRecordings,
+  listRecordings,
   analyzeRecording,
   updateMeeting,
   type Meeting,
@@ -289,32 +290,35 @@ function MeetingCard({ meeting, onEnableRecording, enablingRecording }: MeetingC
   );
 }
 
-// Calendar View Component
+// Calendar View Component - Google Calendar Style Week View
 interface CalendarViewProps {
   meetings: Meeting[];
+  recordings: Recording[];
   currentMonth: Date;
   onMonthChange: (date: Date) => void;
 }
 
-function CalendarView({ meetings, currentMonth, onMonthChange }: CalendarViewProps) {
+function CalendarView({ meetings, recordings, currentMonth, onMonthChange }: CalendarViewProps) {
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const start = new Date(today);
+    start.setDate(today.getDate() - dayOfWeek);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  });
+
   const daysOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  const calendarDays = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-    const days: Date[] = [];
-    const current = new Date(startDate);
-    while (current <= lastDay || days.length % 7 !== 0) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    return days;
-  }, [currentMonth]);
+  // 週の日付を取得
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() + i);
+      return date;
+    });
+  }, [currentWeekStart]);
 
   const getMeetingsForDay = (date: Date) => {
     return meetings.filter((meeting) => {
@@ -323,6 +327,18 @@ function CalendarView({ meetings, currentMonth, onMonthChange }: CalendarViewPro
         meetingDate.getFullYear() === date.getFullYear() &&
         meetingDate.getMonth() === date.getMonth() &&
         meetingDate.getDate() === date.getDate()
+      );
+    });
+  };
+
+  const getRecordingsForDay = (date: Date) => {
+    return recordings.filter((recording) => {
+      if (!recording.start_time) return false;
+      const recordingDate = new Date(recording.start_time);
+      return (
+        recordingDate.getFullYear() === date.getFullYear() &&
+        recordingDate.getMonth() === date.getMonth() &&
+        recordingDate.getDate() === date.getDate()
       );
     });
   };
@@ -336,84 +352,185 @@ function CalendarView({ meetings, currentMonth, onMonthChange }: CalendarViewPro
     );
   };
 
-  const isCurrentMonth = (date: Date) => {
-    return date.getMonth() === currentMonth.getMonth();
-  };
-
-  const prevMonth = () => {
-    const prev = new Date(currentMonth);
-    prev.setMonth(prev.getMonth() - 1);
+  const prevWeek = () => {
+    const prev = new Date(currentWeekStart);
+    prev.setDate(prev.getDate() - 7);
+    setCurrentWeekStart(prev);
     onMonthChange(prev);
   };
 
-  const nextMonth = () => {
-    const next = new Date(currentMonth);
-    next.setMonth(next.getMonth() + 1);
+  const nextWeek = () => {
+    const next = new Date(currentWeekStart);
+    next.setDate(next.getDate() + 7);
+    setCurrentWeekStart(next);
     onMonthChange(next);
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const start = new Date(today);
+    start.setDate(today.getDate() - dayOfWeek);
+    start.setHours(0, 0, 0, 0);
+    setCurrentWeekStart(start);
+    onMonthChange(today);
+  };
+
+  const getEventStyle = (meeting: Meeting) => {
+    const start = new Date(meeting.start_time);
+    const end = new Date(meeting.end_time);
+    const startHour = start.getHours() + start.getMinutes() / 60;
+    const endHour = end.getHours() + end.getMinutes() / 60;
+    const duration = endHour - startHour;
+
+    return {
+      top: `${startHour * 48}px`,
+      height: `${Math.max(duration * 48, 24)}px`,
+    };
+  };
+
+  const getRecordingEventStyle = (recording: Recording) => {
+    if (!recording.start_time) return { top: "0px", height: "48px" };
+    const start = new Date(recording.start_time);
+    const end = recording.end_time ? new Date(recording.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
+    const startHour = start.getHours() + start.getMinutes() / 60;
+    const endHour = end.getHours() + end.getMinutes() / 60;
+    const duration = endHour - startHour;
+
+    return {
+      top: `${startHour * 48}px`,
+      height: `${Math.max(duration * 48, 24)}px`,
+    };
   };
 
   const getEventClass = (meeting: Meeting) => {
     if (meeting.status === "RECORDING_AVAILABLE" || meeting.status === "ANALYZED") {
-      return styles.dayEventRecording;
+      return styles.weekViewEventRecording;
     }
     if (meeting.status === "COMPLETED") {
-      return styles.dayEventCompleted;
+      return styles.weekViewEventCompleted;
     }
-    return styles.dayEventScheduled;
+    return "";
+  };
+
+  const getRecordingEventClass = (recording: Recording) => {
+    if (recording.status === "ANALYZED") {
+      return styles.weekViewEventCompleted;
+    }
+    if (recording.status === "ANALYZING") {
+      return styles.weekViewEventAnalyzing;
+    }
+    return styles.weekViewEventRecording;
+  };
+
+  const formatWeekRange = () => {
+    const start = weekDays[0];
+    const end = weekDays[6];
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.getFullYear()}年${start.getMonth() + 1}月`;
+    }
+    return `${start.getFullYear()}年${start.getMonth() + 1}月 - ${end.getMonth() + 1}月`;
   };
 
   return (
     <div className={styles.calendarSection}>
-      <div className={styles.calendarHeader}>
-        <h3 className={styles.sectionTitle}>カレンダー</h3>
+      {/* Week Navigation */}
+      <div className={styles.weekNavigation}>
+        <button className={styles.todayButton} onClick={goToToday}>
+          今日
+        </button>
         <div className={styles.calendarNav}>
-          <button className={styles.calendarNavButton} onClick={prevMonth}>
+          <button className={styles.calendarNavButton} onClick={prevWeek}>
             &lt;
           </button>
-          <span className={styles.calendarMonth}>
-            {currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
-          </span>
-          <button className={styles.calendarNavButton} onClick={nextMonth}>
+          <button className={styles.calendarNavButton} onClick={nextWeek}>
             &gt;
           </button>
         </div>
+        <span className={styles.weekNavigationTitle}>{formatWeekRange()}</span>
       </div>
-      <div className={styles.calendarGrid}>
-        {daysOfWeek.map((day) => (
-          <div key={day} className={styles.dayHeader}>
-            {day}
-          </div>
-        ))}
-        {calendarDays.map((date, index) => {
-          const dayMeetings = getMeetingsForDay(date);
-          const cellClasses = [
-            styles.dayCell,
-            !isCurrentMonth(date) && styles.dayCellOtherMonth,
-            isToday(date) && styles.dayCellToday,
-          ]
-            .filter(Boolean)
-            .join(" ");
 
-          return (
-            <div key={index} className={cellClasses}>
-              <div className={styles.dayNumber}>{date.getDate()}</div>
-              <div className={styles.dayEvents}>
-                {dayMeetings.slice(0, 3).map((meeting) => (
+      {/* Week View */}
+      <div className={styles.weekView}>
+        {/* Header */}
+        <div className={styles.weekViewHeader}>
+          <div className={styles.weekViewTimeLabel}></div>
+          {weekDays.map((date, index) => (
+            <div
+              key={index}
+              className={`${styles.weekViewDayHeader} ${isToday(date) ? styles.weekViewDayToday : ""}`}
+            >
+              <div className={styles.weekViewDayName}>{daysOfWeek[index]}</div>
+              <div className={styles.weekViewDayNumber}>{date.getDate()}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className={styles.weekViewBody}>
+          {/* Time Column */}
+          <div className={styles.weekViewTimeColumn}>
+            {hours.map((hour) => (
+              <div key={hour} className={styles.weekViewTimeSlot}>
+                {hour === 0 ? "" : `${hour}:00`}
+              </div>
+            ))}
+          </div>
+
+          {/* Day Columns */}
+          {weekDays.map((date, dayIndex) => {
+            const dayMeetings = getMeetingsForDay(date);
+            const dayRecordings = getRecordingsForDay(date);
+            return (
+              <div key={dayIndex} className={styles.weekViewDayColumn}>
+                {/* Hour grid lines */}
+                {hours.map((hour) => (
+                  <div key={hour} className={styles.weekViewHourRow}></div>
+                ))}
+
+                {/* Meeting Events */}
+                {dayMeetings.map((meeting) => (
                   <div
                     key={meeting.meeting_id}
-                    className={`${styles.dayEvent} ${getEventClass(meeting)}`}
+                    className={`${styles.weekViewEvent} ${getEventClass(meeting)}`}
+                    style={getEventStyle(meeting)}
                     title={meeting.title}
                   >
-                    {meeting.title}
+                    <div className={styles.weekViewEventTitle}>{meeting.title}</div>
+                    <div className={styles.weekViewEventTime}>
+                      {new Date(meeting.start_time).toLocaleTimeString("ja-JP", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
                   </div>
                 ))}
-                {dayMeetings.length > 3 && (
-                  <div className={styles.dayEvent}>+{dayMeetings.length - 3}</div>
-                )}
+
+                {/* Recording Events */}
+                {dayRecordings.map((recording) => (
+                  <div
+                    key={recording.recording_name}
+                    className={`${styles.weekViewEvent} ${getRecordingEventClass(recording)}`}
+                    style={getRecordingEventStyle(recording)}
+                    title={`録画: ${recording.conference_record.split("/").pop()} (${recording.status === "ANALYZING" ? "分析中" : recording.status === "ANALYZED" ? "分析済" : "未分析"})`}
+                  >
+                    <div className={styles.weekViewEventTitle}>
+                      {recording.status === "ANALYZING" && "🔄 "}
+                      {recording.status === "ANALYZED" && "✓ "}
+                      録画
+                    </div>
+                    <div className={styles.weekViewEventTime}>
+                      {recording.start_time && new Date(recording.start_time).toLocaleTimeString("ja-JP", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -427,22 +544,11 @@ interface RecordingsSectionProps {
 }
 
 function RecordingsSection({ recordings, onAnalyze, analyzingId }: RecordingsSectionProps) {
-  const unanalyzedRecordings = recordings.filter(
+  const pendingRecordings = recordings.filter(
     (r) => r.status !== "ANALYZED" && r.status !== "ANALYZING"
   );
-
-  if (unanalyzedRecordings.length === 0) {
-    return (
-      <div className={styles.recordingsSection}>
-        <h3 className={styles.sectionTitle}>未分析の録画</h3>
-        <div className={styles.emptyRecordings}>
-          <p className={styles.emptyRecordingsText}>
-            未分析の録画はありません。「録画を同期」で最新の録画を取得してください。
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const analyzingRecordings = recordings.filter((r) => r.status === "ANALYZING");
+  const analyzedRecordings = recordings.filter((r) => r.status === "ANALYZED");
 
   const formatRecordingTime = (startTime?: string | null, endTime?: string | null) => {
     if (!startTime) return "";
@@ -466,44 +572,163 @@ function RecordingsSection({ recordings, onAnalyze, analyzingId }: RecordingsSec
     return `${dateStr} ${startStr}`;
   };
 
+  const hasAnyRecordings = pendingRecordings.length > 0 || analyzingRecordings.length > 0 || analyzedRecordings.length > 0;
+
+  if (!hasAnyRecordings) {
+    return (
+      <div className={styles.recordingsSection}>
+        <h3 className={styles.sectionTitle}>録画</h3>
+        <div className={styles.emptyRecordings}>
+          <p className={styles.emptyRecordingsText}>
+            録画がありません。「録画を同期」で最新の録画を取得してください。
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.recordingsSection}>
-      <h3 className={styles.sectionTitle}>未分析の録画 ({unanalyzedRecordings.length})</h3>
-      <div className={styles.recordingsList}>
-        {unanalyzedRecordings.map((recording) => (
-          <div key={recording.recording_name} className={styles.recordingCard}>
-            <div className={styles.recordingInfo}>
-              <p className={styles.recordingTitle}>
-                {recording.conference_record.split("/").pop()}
-              </p>
-              <span className={styles.recordingMeta}>
-                {formatRecordingTime(recording.start_time, recording.end_time)}
-                {" | Drive ID: "}
-                {recording.drive_file_id.substring(0, 12)}...
-              </span>
-            </div>
-            <div className={styles.recordingActions}>
-              {recording.export_uri && (
-                <a
-                  href={recording.export_uri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.viewButton}
-                >
-                  Drive で見る
-                </a>
-              )}
-              <button
-                className={styles.analyzeButton}
-                onClick={() => onAnalyze(recording)}
-                disabled={analyzingId === recording.recording_name}
-              >
-                {analyzingId === recording.recording_name ? "分析中..." : "分析する"}
-              </button>
-            </div>
+      {/* 分析中の録画 */}
+      {analyzingRecordings.length > 0 && (
+        <>
+          <h3 className={styles.sectionTitle}>
+            <span className={styles.spinnerIcon}>⏳</span>
+            分析中の録画 ({analyzingRecordings.length})
+          </h3>
+          <div className={styles.recordingsList}>
+            {analyzingRecordings.map((recording) => (
+              <div key={recording.recording_name} className={`${styles.recordingCard} ${styles.recordingCardAnalyzing}`}>
+                <div className={styles.recordingInfo}>
+                  <div className={styles.recordingTitleRow}>
+                    <p className={styles.recordingTitle}>
+                      {recording.conference_record.split("/").pop()}
+                    </p>
+                    <span className={styles.analyzingBadge}>
+                      <span className={styles.spinner}></span>
+                      分析中
+                    </span>
+                  </div>
+                  <span className={styles.recordingMeta}>
+                    {formatRecordingTime(recording.start_time, recording.end_time)}
+                    {" | Drive ID: "}
+                    {recording.drive_file_id.substring(0, 12)}...
+                  </span>
+                </div>
+                <div className={styles.recordingActions}>
+                  {recording.export_uri && (
+                    <a
+                      href={recording.export_uri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.viewButton}
+                    >
+                      Drive で見る
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
+
+      {/* 未分析の録画 */}
+      {pendingRecordings.length > 0 && (
+        <>
+          <h3 className={styles.sectionTitle} style={{ marginTop: analyzingRecordings.length > 0 ? 24 : 0 }}>
+            未分析の録画 ({pendingRecordings.length})
+          </h3>
+          <div className={styles.recordingsList}>
+            {pendingRecordings.map((recording) => (
+              <div key={recording.recording_name} className={styles.recordingCard}>
+                <div className={styles.recordingInfo}>
+                  <p className={styles.recordingTitle}>
+                    {recording.conference_record.split("/").pop()}
+                  </p>
+                  <span className={styles.recordingMeta}>
+                    {formatRecordingTime(recording.start_time, recording.end_time)}
+                    {" | Drive ID: "}
+                    {recording.drive_file_id.substring(0, 12)}...
+                  </span>
+                </div>
+                <div className={styles.recordingActions}>
+                  {recording.export_uri && (
+                    <a
+                      href={recording.export_uri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.viewButton}
+                    >
+                      Drive で見る
+                    </a>
+                  )}
+                  <button
+                    className={styles.analyzeButton}
+                    onClick={() => onAnalyze(recording)}
+                    disabled={analyzingId === recording.recording_name}
+                  >
+                    {analyzingId === recording.recording_name ? "分析中..." : "分析する"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* 分析済みの録画 */}
+      {analyzedRecordings.length > 0 && (
+        <>
+          <h3 className={styles.sectionTitle} style={{ marginTop: 24 }}>
+            <span style={{ color: "var(--success)" }}>✓</span>
+            分析済みの録画 ({analyzedRecordings.length})
+          </h3>
+          <div className={styles.recordingsList}>
+            {analyzedRecordings.map((recording) => (
+              <div key={recording.recording_name} className={`${styles.recordingCard} ${styles.recordingCardAnalyzed}`}>
+                <div className={styles.recordingInfo}>
+                  <div className={styles.recordingTitleRow}>
+                    <p className={styles.recordingTitle}>
+                      {recording.conference_record.split("/").pop()}
+                    </p>
+                    <span className={styles.analyzedBadge}>分析済み</span>
+                  </div>
+                  <span className={styles.recordingMeta}>
+                    {formatRecordingTime(recording.start_time, recording.end_time)}
+                  </span>
+                </div>
+                <div className={styles.recordingActions}>
+                  {recording.export_uri && (
+                    <a
+                      href={recording.export_uri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.viewButton}
+                    >
+                      Drive で見る
+                    </a>
+                  )}
+                  {recording.interview_id && (
+                    <Link href={`/interview/${recording.interview_id}`} className={styles.analyzeButton}>
+                      結果を見る
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* 録画がない場合 */}
+      {pendingRecordings.length === 0 && analyzingRecordings.length === 0 && analyzedRecordings.length === 0 && (
+        <div className={styles.emptyRecordings}>
+          <p className={styles.emptyRecordingsText}>
+            録画がありません。「録画を同期」で最新の録画を取得してください。
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -538,9 +763,27 @@ function MeetingsContent() {
     }
   };
 
+  // キャッシュから録画を高速取得
+  const fetchCachedRecordings = async () => {
+    try {
+      const result = await listRecordings();
+      if (result.items.length > 0) {
+        setRecordings(result.items);
+      }
+    } catch (err) {
+      console.warn("Failed to load cached recordings:", err);
+      // キャッシュ取得失敗はエラー表示しない
+    }
+  };
+
   useEffect(() => {
     fetchMeetings();
   }, [filter]);
+
+  // ページロード時にキャッシュから録画を即座に取得
+  useEffect(() => {
+    fetchCachedRecordings();
+  }, []);
 
   const handleCreateMeeting = async (input: CreateMeetingInput) => {
     await createMeeting(input);
@@ -562,10 +805,22 @@ function MeetingsContent() {
   const handleSyncRecordings = async () => {
     setSyncingRecordings(true);
     try {
+      // バックグラウンドで同期（タイムアウトを長めに）
       const result = await syncMeetRecordings({ days_back: 30 });
+      // 同期完了後に録画リストを更新
       setRecordings(result.recordings_found);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sync recordings");
+      // エラー時はキャッシュから再取得を試みる
+      console.warn("Sync failed, trying to load from cache:", err);
+      try {
+        const cached = await listRecordings();
+        if (cached.items.length > 0) {
+          setRecordings(cached.items);
+        }
+      } catch {
+        // キャッシュ取得も失敗した場合のみエラー表示
+        setError(err instanceof Error ? err.message : "Failed to sync recordings");
+      }
     } finally {
       setSyncingRecordings(false);
     }
@@ -666,6 +921,7 @@ function MeetingsContent() {
       {viewMode === "calendar" ? (
         <CalendarView
           meetings={meetings}
+          recordings={recordings}
           currentMonth={currentMonth}
           onMonthChange={setCurrentMonth}
         />

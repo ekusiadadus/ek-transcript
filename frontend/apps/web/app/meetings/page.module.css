@@ -846,3 +846,364 @@
   opacity: 0.6;
   margin: 0;
 }
+
+/* Recording Card States */
+.recordingCardAnalyzing {
+  border-color: rgba(var(--warning-rgb), 0.4);
+  background: rgba(var(--warning-rgb), 0.05);
+}
+
+.recordingCardAnalyzed {
+  border-color: rgba(var(--success-rgb), 0.4);
+  background: rgba(var(--success-rgb), 0.05);
+}
+
+.recordingTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+/* Analyzing Badge */
+.analyzingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(var(--warning-rgb), 0.15);
+  color: var(--warning);
+}
+
+.analyzedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
+}
+
+/* Spinner */
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(var(--warning-rgb), 0.3);
+  border-top-color: var(--warning);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.spinnerIcon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Google Calendar-like Week View */
+.calendarContainer {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.calendarSidebar {
+  background: var(--gray-alpha-100);
+  border: 1px solid var(--gray-alpha-200);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.miniCalendar {
+  margin-bottom: 24px;
+}
+
+.miniCalendarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.miniCalendarNav {
+  display: flex;
+  gap: 4px;
+}
+
+.miniCalendarNavBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.miniCalendarNavBtn:hover {
+  background: var(--gray-alpha-200);
+}
+
+.miniCalendarMonth {
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.miniCalendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.miniCalendarDayHeader {
+  text-align: center;
+  font-family: var(--font-geist-sans);
+  font-size: 10px;
+  color: var(--foreground);
+  opacity: 0.5;
+  padding: 4px 0;
+}
+
+.miniCalendarDay {
+  text-align: center;
+  font-family: var(--font-geist-mono);
+  font-size: 11px;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.miniCalendarDay:hover {
+  background: var(--gray-alpha-200);
+}
+
+.miniCalendarDayOther {
+  opacity: 0.3;
+}
+
+.miniCalendarDayToday {
+  background: var(--accent);
+  color: white;
+}
+
+.miniCalendarDaySelected {
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+}
+
+.miniCalendarDayHasEvent {
+  font-weight: 600;
+}
+
+.miniCalendarDayHasEvent::after {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 50%;
+  margin: 2px auto 0;
+}
+
+/* Week View */
+.weekView {
+  background: var(--gray-alpha-100);
+  border: 1px solid var(--gray-alpha-200);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.weekViewHeader {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  border-bottom: 1px solid var(--gray-alpha-200);
+  background: var(--background);
+}
+
+.weekViewTimeLabel {
+  padding: 8px;
+}
+
+.weekViewDayHeader {
+  text-align: center;
+  padding: 12px 8px;
+  border-left: 1px solid var(--gray-alpha-200);
+}
+
+.weekViewDayName {
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  color: var(--foreground);
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.weekViewDayNumber {
+  font-family: var(--font-geist-sans);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.weekViewDayToday .weekViewDayNumber {
+  background: var(--accent);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.weekViewBody {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.weekViewTimeColumn {
+  border-right: 1px solid var(--gray-alpha-200);
+}
+
+.weekViewTimeSlot {
+  height: 48px;
+  padding: 0 8px;
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  color: var(--foreground);
+  opacity: 0.5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  transform: translateY(-6px);
+}
+
+.weekViewDayColumn {
+  border-left: 1px solid var(--gray-alpha-200);
+  position: relative;
+}
+
+.weekViewHourRow {
+  height: 48px;
+  border-bottom: 1px solid var(--gray-alpha-100);
+}
+
+.weekViewEvent {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  background: rgba(var(--accent-rgb), 0.9);
+  color: white;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: var(--font-geist-sans);
+  font-size: 11px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 1;
+}
+
+.weekViewEvent:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+.weekViewEventTitle {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weekViewEventTime {
+  font-size: 10px;
+  opacity: 0.9;
+}
+
+.weekViewEventRecording {
+  background: rgba(139, 92, 246, 0.9);
+}
+
+.weekViewEventCompleted {
+  background: rgba(var(--success-rgb), 0.9);
+}
+
+.weekViewEventAnalyzing {
+  background: rgba(var(--warning-rgb), 0.9);
+  animation: pulseEvent 2s ease-in-out infinite;
+}
+
+@keyframes pulseEvent {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Today Button */
+.todayButton {
+  appearance: none;
+  border-radius: 8px;
+  height: 32px;
+  padding: 0 12px;
+  font-family: var(--font-geist-sans);
+  border: 1px solid var(--gray-alpha-200);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.todayButton:hover {
+  background: var(--gray-alpha-100);
+}
+
+/* Week Navigation */
+.weekNavigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gray-alpha-200);
+  background: var(--background);
+}
+
+.weekNavigationTitle {
+  font-family: var(--font-geist-sans);
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
+}
