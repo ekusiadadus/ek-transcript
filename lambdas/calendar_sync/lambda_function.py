@@ -31,11 +31,14 @@ logger.setLevel(logging.INFO)
 # AWS クライアント
 dynamodb = boto3.resource("dynamodb")
 s3_client = boto3.client("s3")
+sfn_client = boto3.client("stepfunctions")
 
 # 環境変数
 MEETINGS_TABLE = os.environ.get("MEETINGS_TABLE", "")
 RECORDINGS_TABLE = os.environ.get("RECORDINGS_TABLE", "")
 RECORDINGS_BUCKET = os.environ.get("RECORDINGS_BUCKET", "")
+STATE_MACHINE_ARN = os.environ.get("STATE_MACHINE_ARN", "")
+INTERVIEWS_TABLE = os.environ.get("INTERVIEWS_TABLE", "")
 
 
 def list_events(
@@ -547,6 +550,11 @@ def analyze_recording(user_id: str, drive_file_id: str, recording_name: str) -> 
     """
     録画の分析を開始
 
+    1. Google Drive からファイルをダウンロード
+    2. S3 にアップロード
+    3. Step Functions を起動
+    4. recordings テーブルに interview_id を設定
+
     Args:
         user_id: ユーザー ID
         drive_file_id: Google Drive ファイル ID
@@ -568,17 +576,120 @@ def analyze_recording(user_id: str, drive_file_id: str, recording_name: str) -> 
             "recording_name": recording_name,
             "drive_file_id": drive_file_id,
             "conference_record": recording_name.split("/recordings/")[0] if "/recordings/" in recording_name else "",
-            "status": "ANALYZING",
+            "status": "DOWNLOADING",
         }
         save_recording_to_cache(user_id, recording)
     else:
+        # ステータスを DOWNLOADING に更新
+        recording = update_recording_status(user_id, recording_name, "DOWNLOADING")
+
+    interview_id = None
+
+    try:
+        # 1. Google Drive からファイルをダウンロード
+        logger.info(f"Downloading file from Google Drive: {drive_file_id}")
+        file_content, metadata = download_recording_from_drive(user_id, drive_file_id)
+        file_name = metadata.get("name", f"{drive_file_id}.mp4")
+        file_size = len(file_content)
+        logger.info(f"Downloaded: {file_name} ({file_size} bytes)")
+
+        # 2. S3 にアップロード
+        # Format: recordings/{userId}/{recording_id}/{fileName}
+        recording_id = recording_name.split("/")[-1] if "/" in recording_name else recording_name
+        s3_key = f"recordings/{user_id}/{recording_id}/{file_name}"
+        logger.info(f"Uploading to S3: s3://{RECORDINGS_BUCKET}/{s3_key}")
+
+        file_buffer = BytesIO(file_content)
+        s3_client.upload_fileobj(
+            file_buffer,
+            RECORDINGS_BUCKET,
+            s3_key,
+            ExtraArgs={"ContentType": metadata.get("mimeType", "video/mp4")},
+        )
+        logger.info(f"Uploaded to S3: {s3_key}")
+
         # ステータスを ANALYZING に更新
-        recording = update_recording_status(user_id, recording_name, "ANALYZING")
+        update_recording_status(user_id, recording_name, "ANALYZING")
 
-    # TODO: 将来的に Step Functions を起動して実際の分析を行う
-    # sfn_client.start_execution(...)
+        # 3. Step Functions を起動
+        if STATE_MACHINE_ARN:
+            interview_id = str(uuid.uuid4())
+            created_at = datetime.now(timezone.utc).isoformat()
 
-    logger.info(f"Recording analysis started: {recording_name}")
+            sfn_input = {
+                "interview_id": interview_id,
+                "bucket": RECORDINGS_BUCKET,
+                "video_key": s3_key,
+                "user_id": user_id,
+                "segment": "MEETING",
+                "file_name": file_name,
+                "file_size": file_size,
+                "upload_date": created_at.split("T")[0],
+                "created_at": created_at,
+                "recording_name": recording_name,
+            }
+
+            execution_name = f"interview-{interview_id}"
+            logger.info(f"Starting Step Functions execution: {execution_name}")
+
+            response = sfn_client.start_execution(
+                stateMachineArn=STATE_MACHINE_ARN,
+                name=execution_name,
+                input=json.dumps(sfn_input),
+            )
+            execution_arn = response.get("executionArn")
+            logger.info(f"Step Functions started: {execution_arn}")
+
+            # 4. interviews テーブルにレコードを作成
+            if INTERVIEWS_TABLE:
+                interviews_table = dynamodb.Table(INTERVIEWS_TABLE)
+                interviews_table.put_item(
+                    Item={
+                        "interview_id": interview_id,
+                        "user_id": user_id,
+                        "segment": "MEETING",
+                        "file_name": file_name,
+                        "file_size": file_size,
+                        "video_key": s3_key,
+                        "bucket": RECORDINGS_BUCKET,
+                        "status": "processing",
+                        "progress": 0,
+                        "current_step": "queued",
+                        "execution_arn": execution_arn,
+                        "recording_name": recording_name,
+                        "created_at": created_at,
+                        "updated_at": created_at,
+                    }
+                )
+                logger.info(f"Created interview record: {interview_id}")
+
+            # 5. recordings テーブルに interview_id を設定
+            if RECORDINGS_TABLE:
+                recordings_table = dynamodb.Table(RECORDINGS_TABLE)
+                recordings_table.update_item(
+                    Key={"user_id": user_id, "recording_name": recording_name},
+                    UpdateExpression="SET interview_id = :iid, updated_at = :updated_at",
+                    ExpressionAttributeValues={
+                        ":iid": interview_id,
+                        ":updated_at": created_at,
+                    },
+                )
+                logger.info(f"Updated recording with interview_id: {interview_id}")
+
+        else:
+            logger.warning("STATE_MACHINE_ARN not set, skipping Step Functions execution")
+
+        # 最新の recording 情報を取得
+        recording = get_recording(user_id, recording_name) or recording
+
+    except Exception as e:
+        logger.error(f"Failed to analyze recording: {e}", exc_info=True)
+        # エラー時は status を ERROR に更新
+        update_recording_status(user_id, recording_name, "ERROR")
+        recording["status"] = "ERROR"
+        raise
+
+    logger.info(f"Recording analysis started: {recording_name}, interview_id: {interview_id}")
 
     return {
         "recording_name": recording.get("recording_name"),
@@ -590,7 +701,7 @@ def analyze_recording(user_id: str, drive_file_id: str, recording_name: str) -> 
         "export_uri": recording.get("export_uri"),
         "status": recording.get("status"),
         "meeting_id": recording.get("meeting_id"),
-        "interview_id": recording.get("interview_id"),
+        "interview_id": interview_id or recording.get("interview_id"),
     }
 
 

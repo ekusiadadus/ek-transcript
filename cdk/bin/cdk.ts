@@ -84,7 +84,7 @@ stepFunctionsStack.addDependency(lambdaStack);
 stepFunctionsStack.addDependency(storageStack);
 stepFunctionsStack.addDependency(googleMeetStorageStack);
 
-// Google Meet Lambda Stack
+// Google Meet Lambda Stack (with Step Functions integration)
 const googleMeetLambdaStack = new GoogleMeetLambdaStack(
   app,
   `EkTranscriptGoogleMeetLambda-${environment}`,
@@ -98,11 +98,14 @@ const googleMeetLambdaStack = new GoogleMeetLambdaStack(
     tokenEncryptionKey: googleMeetStorageStack.tokenEncryptionKey,
     recordingsBucket: storageStack.inputBucket,
     googleOAuthSecret: googleMeetStorageStack.googleOAuthSecret,
+    stateMachine: stepFunctionsStack.stateMachine,
+    interviewsTable: storageStack.interviewsTable,
     description: "Lambda functions for Google Meet integration",
   }
 );
 googleMeetLambdaStack.addDependency(googleMeetStorageStack);
 googleMeetLambdaStack.addDependency(storageStack);
+googleMeetLambdaStack.addDependency(stepFunctionsStack);
 
 // AppSync Stack (GraphQL + Events API)
 const appSyncStack = new AppSyncStack(app, `EkTranscriptAppSync-${environment}`, {

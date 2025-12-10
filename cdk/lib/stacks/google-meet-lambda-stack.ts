@@ -5,6 +5,7 @@ import * as kms from "aws-cdk-lib/aws-kms";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -17,6 +18,8 @@ export interface GoogleMeetLambdaStackProps extends cdk.StackProps {
   tokenEncryptionKey: kms.IKey;
   recordingsBucket: s3.IBucket;
   googleOAuthSecret: secretsmanager.ISecret;
+  stateMachine?: sfn.IStateMachine;
+  interviewsTable?: dynamodb.ITable;
 }
 
 /**
@@ -48,6 +51,8 @@ export class GoogleMeetLambdaStack extends cdk.Stack {
       tokenEncryptionKey,
       recordingsBucket,
       googleOAuthSecret,
+      stateMachine,
+      interviewsTable,
     } = props;
 
     // ========================================
@@ -133,10 +138,14 @@ export class GoogleMeetLambdaStack extends cdk.Stack {
         path.join(__dirname, "../../..", "lambdas/calendar_sync")
       ),
       layers: [sharedLayer],
-      memorySize: 512,
-      timeout: cdk.Duration.seconds(300), // 5 minutes
+      memorySize: 3008, // High memory for large file download
+      timeout: cdk.Duration.seconds(900), // 15 minutes for download + upload
+      ephemeralStorageSize: cdk.Size.gibibytes(10), // 10 GB for large video files
       environment: {
         ...commonEnv,
+        RECORDINGS_BUCKET: recordingsBucket.bucketName,
+        ...(stateMachine && { STATE_MACHINE_ARN: stateMachine.stateMachineArn }),
+        ...(interviewsTable && { INTERVIEWS_TABLE: interviewsTable.tableName }),
       },
     });
 
@@ -241,8 +250,19 @@ export class GoogleMeetLambdaStack extends cdk.Stack {
     // S3 permissions for Download Recording Lambda
     recordingsBucket.grantReadWrite(this.downloadRecordingLambda);
 
+    // S3 permissions for Calendar Sync Lambda (for analyzeRecording)
+    recordingsBucket.grantReadWrite(this.calendarSyncLambda);
+
     // Event Handler can invoke Download Recording Lambda
     this.downloadRecordingLambda.grantInvoke(this.eventHandlerLambda);
+
+    // Calendar Sync Lambda permissions for Step Functions and interviews table
+    if (stateMachine) {
+      stateMachine.grantStartExecution(this.calendarSyncLambda);
+    }
+    if (interviewsTable) {
+      interviewsTable.grantReadWriteData(this.calendarSyncLambda);
+    }
 
     // ========================================
     // Reserved Concurrency (as per architecture doc)
