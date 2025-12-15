@@ -10,6 +10,8 @@ const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 const sfnClient = new SFNClient({});
 
+// Version: 2025-12-11 - Added recordings table update logging
+
 interface StepFunctionsEvent {
   source: string;
   "detail-type": string;
