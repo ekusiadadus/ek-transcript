@@ -83,7 +83,22 @@ export interface GetVideoUrlResponse {
   getVideoUrl: VideoUrlResponse;
 }
 
-// Analysis JSON types from S3
+// =============================================================================
+// Enum Types (v2)
+// =============================================================================
+
+export type BillCheckFrequency = "monthly" | "few_months" | "rarely";
+export type AppUsageFrequency = "daily" | "weekly_few" | "monthly_few" | "rarely";
+export type ReplacementIntention = "immediate" | "consider" | "no_replace";
+export type PurchaseChannel = "amazon" | "electronics_store" | "official_site" | "builder" | "other";
+export type PurchaseTiming = "within_3_months" | "within_6_months" | "within_1_year" | "over_1_year" | "unknown";
+export type Segment = "A" | "B" | "C" | "D";
+export type JudgmentLabel = "最優先ターゲット" | "有望ターゲット" | "要検討" | "ターゲット外";
+
+// =============================================================================
+// Analysis JSON types from S3 (v2)
+// =============================================================================
+
 export interface AnalysisBasicAttributes {
   age: number | null;
   household_size: number | null;
@@ -126,10 +141,18 @@ export interface AnalysisDeviceInfo {
 }
 
 export interface AnalysisPriceSensitivity {
-  cheap_price_range: string | null;
-  fair_price_range: string | null;
-  expensive_price_range: string | null;
+  // Structured price ranges (min/max in yen)
+  cheap_min: number | null;
+  cheap_max: number | null;
+  fair_min: number | null;
+  fair_max: number | null;
+  expensive_min: number | null;
+  expensive_max: number | null;
+  // Purchase info
   max_purchase_price: number | null;
+  actual_purchase_price: number | null;
+  purchase_timing: PurchaseTiming | string | null;
+  purchase_timing_note: string | null;
 }
 
 export interface AnalysisCrowdfundingExperience {
@@ -167,14 +190,30 @@ export interface AnalysisScoring {
   segment_reason: string | null;
 }
 
+export interface AnalysisSignalDetails {
+  // Good Signals (4 fixed items)
+  good_took_cost_action: boolean | null;
+  good_uses_app_weekly: boolean | null;
+  good_has_crowdfunding_exp: boolean | null;
+  good_would_replace_immediately: boolean | null;
+  // Bad Signals (4 fixed items)
+  bad_no_past_action: boolean | null;
+  bad_no_bill_check_6months: boolean | null;
+  bad_device_barely_used: boolean | null;
+  bad_said_will_consider: boolean | null;
+  // Additional signals (always array, never null)
+  additional_good_signals: string[];
+  additional_bad_signals: string[];
+  // Evidence (optional, for debugging/review)
+  evidence: Record<string, string> | null;
+}
+
 export interface AnalysisInsights {
   most_impressive_quote: string | null;
   unexpected_findings: string | null;
   non_negotiable_value: string | null;
   reason_not_to_pay: string | null;
   suggestion_for_500_supporters: string | null;
-  good_signals: string[];
-  bad_signals: string[];
 }
 
 export interface AnalysisData {
@@ -187,9 +226,48 @@ export interface AnalysisData {
   crowdfunding_experience: AnalysisCrowdfundingExperience;
   family_and_barriers: AnalysisFamilyAndBarriers;
   scoring: AnalysisScoring;
+  signal_details: AnalysisSignalDetails;
   insights: AnalysisInsights;
   summary: string | null;
   action_items: string[];
+}
+
+// =============================================================================
+// Computed Types (v2) - These are derived, not stored
+// =============================================================================
+
+export interface ScoringConditions {
+  // Electricity Interest conditions
+  can_recall_recent_bill: boolean;
+  has_two_or_more_actions: boolean;
+  has_switched_company: boolean;
+  checks_bill_monthly: boolean;
+  // Engagement conditions
+  uses_app_weekly_3x: boolean;
+  has_3_or_more_automations: boolean;
+  has_5_or_more_devices: boolean;
+  would_replace_immediately: boolean;
+  // Crowdfunding conditions
+  has_crowdfunding_exp: boolean;
+  crowdfunding_3_or_more: boolean;
+  crowdfunding_10k_plus: boolean;
+  crowdfunding_gadget: boolean;
+}
+
+export interface ComputedScores {
+  electricity_interest_score: number;
+  engagement_score: number;
+  crowdfunding_fit_score: number;
+  total_score: number;
+}
+
+export interface DerivedAnalysisFields {
+  scoring_conditions: ScoringConditions;
+  computed_scores: ComputedScores;
+  judgment_label: JudgmentLabel;
+  segment: Segment;
+  good_signal_count: number;
+  bad_signal_count: number;
 }
 
 // Meeting types for Google Meet integration
