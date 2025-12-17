@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.13.1",
@@ -21,10 +23,16 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "^5.1.2",
     "eslint": "^9.39.1",
-    "typescript": "5.9.2"
+    "jsdom": "^27.3.0",
+    "typescript": "5.9.2",
+    "vitest": "^4.0.16"
   }
 }

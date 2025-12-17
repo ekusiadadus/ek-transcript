@@ -1016,6 +1016,16 @@ function ActionItemsSection({ actionItems }: { actionItems: string[] }) {
 function InterviewContent({ interview, analysis }: { interview: Interview; analysis: AnalysisData | null }) {
   return (
     <div className={styles.content}>
+      {/* Video - Displayed at the top */}
+      {interview.video_key && (
+        <div className={styles.mediaSection}>
+          <h2 className={styles.sectionTitle}>
+            動画{interview.file_name && ` - ${interview.file_name}`}
+          </h2>
+          <VideoPlayer videoKey={interview.video_key} />
+        </div>
+      )}
+
       {/* Score Hero with Judgment */}
       {analysis && <ScoreHero analysis={analysis} />}
 
@@ -1059,16 +1069,6 @@ function InterviewContent({ interview, analysis }: { interview: Interview; analy
 
       {/* Action Items */}
       {analysis?.action_items && <ActionItemsSection actionItems={analysis.action_items} />}
-
-      {/* Video */}
-      {interview.video_key && (
-        <div className={styles.mediaSection}>
-          <h2 className={styles.sectionTitle}>
-            動画{interview.file_name && ` - ${interview.file_name}`}
-          </h2>
-          <VideoPlayer videoKey={interview.video_key} />
-        </div>
-      )}
 
       {/* Transcript */}
       {interview.transcript_key && (
