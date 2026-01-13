@@ -12,6 +12,14 @@ import styles from "./page.module.css";
 
 type FilterStatus = "ALL" | "COMPLETED" | "PROCESSING" | "PENDING" | "FAILED";
 
+/**
+ * Normalize status to uppercase for consistent comparison.
+ * API may return lowercase (e.g., "completed") but UI expects uppercase.
+ */
+const normalizeStatus = (status: string | null | undefined): string => {
+  return status?.toUpperCase() ?? "PENDING";
+};
+
 const STATUS_LABELS: Record<string, string> = {
   COMPLETED: "完了",
   PROCESSING: "処理中",
@@ -22,8 +30,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function StatusBadge({ status }: { status: string }) {
+  const normalized = normalizeStatus(status);
   const getStatusClass = () => {
-    switch (status) {
+    switch (normalized) {
       case "COMPLETED":
         return styles.statusCompleted;
       case "PROCESSING":
@@ -39,16 +48,19 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span className={`${styles.statusBadge} ${getStatusClass()}`}>
-      {STATUS_LABELS[status] || status}
+      {STATUS_LABELS[normalized] || normalized}
     </span>
   );
 }
 
 function InterviewCard({ interview }: { interview: Interview }) {
   const router = useRouter();
+  const status = normalizeStatus(interview.status);
+  const isCompleted = status === "COMPLETED";
+  const isProcessing = ["PROCESSING", "TRANSCRIBING", "ANALYZING"].includes(status);
 
   const handleClick = () => {
-    if (interview.status === "COMPLETED") {
+    if (isCompleted) {
       router.push(`/interview/${interview.interview_id}`);
     }
   };
@@ -66,11 +78,11 @@ function InterviewCard({ interview }: { interview: Interview }) {
   return (
     <div
       className={`${styles.interviewCard} ${
-        interview.status === "COMPLETED" ? styles.interviewCardClickable : ""
+        isCompleted ? styles.interviewCardClickable : ""
       }`}
       onClick={handleClick}
-      role={interview.status === "COMPLETED" ? "button" : undefined}
-      tabIndex={interview.status === "COMPLETED" ? 0 : undefined}
+      role={isCompleted ? "button" : undefined}
+      tabIndex={isCompleted ? 0 : undefined}
     >
       <div className={styles.interviewHeader}>
         <h3 className={styles.interviewTitle}>
@@ -88,7 +100,7 @@ function InterviewCard({ interview }: { interview: Interview }) {
         )}
       </div>
 
-      {interview.status === "PROCESSING" && interview.progress !== undefined && (
+      {isProcessing && interview.progress !== undefined && (
         <div className={styles.progressBar}>
           <div
             className={styles.progressFill}
@@ -97,7 +109,7 @@ function InterviewCard({ interview }: { interview: Interview }) {
         </div>
       )}
 
-      {interview.status === "COMPLETED" && (
+      {isCompleted && (
         <div className={styles.interviewActions}>
           <Link
             href={`/interview/${interview.interview_id}`}
@@ -169,7 +181,7 @@ export default function DashboardPage() {
   const filteredInterviews =
     filter === "ALL"
       ? interviews
-      : interviews.filter((i) => i.status === filter);
+      : interviews.filter((i) => normalizeStatus(i.status) === filter);
 
   const filterOptions: { value: FilterStatus; label: string }[] = [
     { value: "ALL", label: "すべて" },
@@ -196,14 +208,14 @@ export default function DashboardPage() {
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue}>
-            {interviews.filter((i) => i.status === "COMPLETED").length}
+            {interviews.filter((i) => normalizeStatus(i.status) === "COMPLETED").length}
           </span>
           <span className={styles.statLabel}>分析完了</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue}>
             {interviews.filter((i) =>
-              ["PROCESSING", "TRANSCRIBING", "ANALYZING"].includes(i.status ?? "")
+              ["PROCESSING", "TRANSCRIBING", "ANALYZING"].includes(normalizeStatus(i.status))
             ).length}
           </span>
           <span className={styles.statLabel}>処理中</span>
