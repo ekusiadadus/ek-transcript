@@ -1,5 +1,5 @@
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 32px 24px;
 }
@@ -34,10 +34,10 @@
   background-color: var(--accent-hover);
 }
 
-/* Stats */
+/* Stats - Enhanced */
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 32px;
 }
@@ -46,35 +46,71 @@
   background-color: var(--surface);
   border: 1px solid var(--divider);
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.statCard:hover {
+  border-color: var(--accent);
+}
+
+.statHighlight {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.statHighlight .statValue {
+  color: #059669;
 }
 
 .statValue {
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--accent);
+  line-height: 1;
 }
 
 .statLabel {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
+  text-align: center;
 }
 
-/* Filters */
+/* Filter Section */
+.filterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 80px;
+}
+
 .filters {
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
   flex-wrap: wrap;
 }
 
 .filterButton {
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
   background-color: var(--surface);
@@ -82,6 +118,9 @@
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .filterButton:hover {
@@ -100,7 +139,60 @@
   border-color: var(--accent-hover);
 }
 
-/* Interview List */
+.filterCount {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* Segment Filter Colors */
+.segmentFilter {
+  position: relative;
+}
+
+.segmentA:not(.filterButtonActive) {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #059669;
+}
+
+.segmentA:not(.filterButtonActive):hover {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+.segmentB:not(.filterButtonActive) {
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #7c3aed;
+}
+
+.segmentB:not(.filterButtonActive):hover {
+  background-color: rgba(139, 92, 246, 0.08);
+}
+
+.segmentC:not(.filterButtonActive) {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #d97706;
+}
+
+.segmentC:not(.filterButtonActive):hover {
+  background-color: rgba(245, 158, 11, 0.08);
+}
+
+.segmentD:not(.filterButtonActive) {
+  border-color: rgba(107, 114, 128, 0.4);
+  color: #4b5563;
+}
+
+.segmentD:not(.filterButtonActive):hover {
+  background-color: rgba(107, 114, 128, 0.08);
+}
+
+/* Interview Grid - 2 columns */
+.interviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* Legacy Interview List (kept for compatibility) */
 .interviewList {
   display: flex;
   flex-direction: column;
@@ -299,14 +391,31 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .interviewGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+  }
+
+  .filterGroup {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats {
+    grid-template-columns: 1fr;
   }
 }

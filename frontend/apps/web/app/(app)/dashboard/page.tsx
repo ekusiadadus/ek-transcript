@@ -2,126 +2,68 @@
 
 /**
  * Dashboard page - Interview list and overview (US-10, US-12)
+ *
+ * Enhanced with rich interview cards showing:
+ * - Total score and judgment label
+ * - Segment classification with color coding
+ * - Visual priority indicators
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth-context";
 import { listInterviews, type Interview } from "../../../lib/graphql";
+import { InterviewCard } from "../../../components/InterviewCard";
+import { computeJudgmentLabel } from "../../../lib/analysis-compute";
+import type { Segment } from "../../../lib/graphql/types";
 import styles from "./page.module.css";
 
 type FilterStatus = "ALL" | "COMPLETED" | "PROCESSING" | "PENDING" | "FAILED";
+type FilterSegment = "ALL" | "A" | "B" | "C" | "D";
 
 /**
  * Normalize status to uppercase for consistent comparison.
- * API may return lowercase (e.g., "completed") but UI expects uppercase.
  */
 const normalizeStatus = (status: string | null | undefined): string => {
   return status?.toUpperCase() ?? "PENDING";
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  COMPLETED: "完了",
-  PROCESSING: "処理中",
-  PENDING: "待機中",
-  FAILED: "失敗",
-  TRANSCRIBING: "文字起こし中",
-  ANALYZING: "分析中",
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const normalized = normalizeStatus(status);
-  const getStatusClass = () => {
-    switch (normalized) {
-      case "COMPLETED":
-        return styles.statusCompleted;
-      case "PROCESSING":
-      case "TRANSCRIBING":
-      case "ANALYZING":
-        return styles.statusProcessing;
-      case "FAILED":
-        return styles.statusFailed;
-      default:
-        return styles.statusPending;
+/**
+ * Get segment counts from interviews.
+ */
+function getSegmentCounts(interviews: Interview[]): Record<Segment, number> {
+  const counts: Record<Segment, number> = { A: 0, B: 0, C: 0, D: 0 };
+  interviews.forEach((i) => {
+    const seg = (i.segment as Segment) || "D";
+    if (seg in counts) {
+      counts[seg]++;
     }
-  };
-
-  return (
-    <span className={`${styles.statusBadge} ${getStatusClass()}`}>
-      {STATUS_LABELS[normalized] || normalized}
-    </span>
-  );
+  });
+  return counts;
 }
 
-function InterviewCard({ interview }: { interview: Interview }) {
-  const router = useRouter();
-  const status = normalizeStatus(interview.status);
-  const isCompleted = status === "COMPLETED";
-  const isProcessing = ["PROCESSING", "TRANSCRIBING", "ANALYZING"].includes(status);
-
-  const handleClick = () => {
-    if (isCompleted) {
-      router.push(`/interview/${interview.interview_id}`);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  return (
-    <div
-      className={`${styles.interviewCard} ${
-        isCompleted ? styles.interviewCardClickable : ""
-      }`}
-      onClick={handleClick}
-      role={isCompleted ? "button" : undefined}
-      tabIndex={isCompleted ? 0 : undefined}
-    >
-      <div className={styles.interviewHeader}>
-        <h3 className={styles.interviewTitle}>
-          {interview.file_name || `Interview ${interview.interview_id.slice(0, 8)}`}
-        </h3>
-        <StatusBadge status={interview.status ?? "PENDING"} />
-      </div>
-
-      <div className={styles.interviewMeta}>
-        <span className={styles.interviewDate}>
-          {formatDate(interview.created_at)}
-        </span>
-        {interview.segment && (
-          <span className={styles.interviewSegment}>{interview.segment}</span>
-        )}
-      </div>
-
-      {isProcessing && interview.progress !== undefined && (
-        <div className={styles.progressBar}>
-          <div
-            className={styles.progressFill}
-            style={{ width: `${interview.progress}%` }}
-          />
-        </div>
-      )}
-
-      {isCompleted && (
-        <div className={styles.interviewActions}>
-          <Link
-            href={`/interview/${interview.interview_id}`}
-            className={styles.viewButton}
-            onClick={(e) => e.stopPropagation()}
-          >
-            詳細を見る
-          </Link>
-        </div>
-      )}
-    </div>
+/**
+ * Get average score of completed interviews.
+ */
+function getAverageScore(interviews: Interview[]): number | null {
+  const completed = interviews.filter(
+    (i) => normalizeStatus(i.status) === "COMPLETED" && i.total_score !== null
   );
+  if (completed.length === 0) return null;
+  const sum = completed.reduce((acc, i) => acc + (i.total_score ?? 0), 0);
+  return Math.round(sum / completed.length);
+}
+
+/**
+ * Get priority target count (score >= 25).
+ */
+function getPriorityCount(interviews: Interview[]): number {
+  return interviews.filter(
+    (i) =>
+      normalizeStatus(i.status) === "COMPLETED" &&
+      i.total_score !== null &&
+      i.total_score >= 25
+  ).length;
 }
 
 export default function DashboardPage() {
@@ -130,7 +72,8 @@ export default function DashboardPage() {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterStatus>("ALL");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>("ALL");
+  const [segmentFilter, setSegmentFilter] = useState<FilterSegment>("ALL");
 
   useEffect(() => {
     if (!isAuthenticated || authLoading) return;
@@ -153,6 +96,44 @@ export default function DashboardPage() {
 
     fetchInterviews();
   }, [isAuthenticated, authLoading]);
+
+  // Computed values
+  const completedInterviews = useMemo(
+    () => interviews.filter((i) => normalizeStatus(i.status) === "COMPLETED"),
+    [interviews]
+  );
+
+  const segmentCounts = useMemo(
+    () => getSegmentCounts(completedInterviews),
+    [completedInterviews]
+  );
+
+  const averageScore = useMemo(
+    () => getAverageScore(interviews),
+    [interviews]
+  );
+
+  const priorityCount = useMemo(
+    () => getPriorityCount(interviews),
+    [interviews]
+  );
+
+  // Filtered interviews
+  const filteredInterviews = useMemo(() => {
+    let result = interviews;
+
+    // Status filter
+    if (statusFilter !== "ALL") {
+      result = result.filter((i) => normalizeStatus(i.status) === statusFilter);
+    }
+
+    // Segment filter (only for completed)
+    if (segmentFilter !== "ALL") {
+      result = result.filter((i) => i.segment === segmentFilter);
+    }
+
+    return result;
+  }, [interviews, statusFilter, segmentFilter]);
 
   if (authLoading) {
     return (
@@ -178,17 +159,20 @@ export default function DashboardPage() {
     );
   }
 
-  const filteredInterviews =
-    filter === "ALL"
-      ? interviews
-      : interviews.filter((i) => normalizeStatus(i.status) === filter);
-
-  const filterOptions: { value: FilterStatus; label: string }[] = [
+  const statusFilterOptions: { value: FilterStatus; label: string }[] = [
     { value: "ALL", label: "すべて" },
     { value: "COMPLETED", label: "完了" },
     { value: "PROCESSING", label: "処理中" },
     { value: "PENDING", label: "待機中" },
     { value: "FAILED", label: "失敗" },
+  ];
+
+  const segmentFilterOptions: { value: FilterSegment; label: string; count: number }[] = [
+    { value: "ALL", label: "全セグメント", count: completedInterviews.length },
+    { value: "A", label: "A: 省エネ意識高", count: segmentCounts.A },
+    { value: "B", label: "B: ガジェット好き", count: segmentCounts.B },
+    { value: "C", label: "C: 便利さ追求", count: segmentCounts.C },
+    { value: "D", label: "D: ライト層", count: segmentCounts.D },
   ];
 
   return (
@@ -200,41 +184,66 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Stats */}
+      {/* Enhanced Stats */}
       <div className={styles.stats}>
         <div className={styles.statCard}>
           <span className={styles.statValue}>{interviews.length}</span>
-          <span className={styles.statLabel}>総インタビュー数</span>
+          <span className={styles.statLabel}>総インタビュー</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statValue}>
-            {interviews.filter((i) => normalizeStatus(i.status) === "COMPLETED").length}
-          </span>
+          <span className={styles.statValue}>{completedInterviews.length}</span>
           <span className={styles.statLabel}>分析完了</span>
         </div>
+        <div className={`${styles.statCard} ${styles.statHighlight}`}>
+          <span className={styles.statValue}>{priorityCount}</span>
+          <span className={styles.statLabel}>最優先ターゲット</span>
+        </div>
         <div className={styles.statCard}>
           <span className={styles.statValue}>
-            {interviews.filter((i) =>
-              ["PROCESSING", "TRANSCRIBING", "ANALYZING"].includes(normalizeStatus(i.status))
-            ).length}
+            {averageScore !== null ? averageScore : "-"}
           </span>
-          <span className={styles.statLabel}>処理中</span>
+          <span className={styles.statLabel}>平均スコア</span>
         </div>
       </div>
 
-      {/* Filter */}
-      <div className={styles.filters}>
-        {filterOptions.map((option) => (
-          <button
-            key={option.value}
-            className={`${styles.filterButton} ${
-              filter === option.value ? styles.filterButtonActive : ""
-            }`}
-            onClick={() => setFilter(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
+      {/* Filters */}
+      <div className={styles.filterSection}>
+        {/* Status Filter */}
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>ステータス</span>
+          <div className={styles.filters}>
+            {statusFilterOptions.map((option) => (
+              <button
+                key={option.value}
+                className={`${styles.filterButton} ${
+                  statusFilter === option.value ? styles.filterButtonActive : ""
+                }`}
+                onClick={() => setStatusFilter(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Segment Filter */}
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>セグメント</span>
+          <div className={styles.filters}>
+            {segmentFilterOptions.map((option) => (
+              <button
+                key={option.value}
+                className={`${styles.filterButton} ${styles.segmentFilter} ${
+                  segmentFilter === option.value ? styles.filterButtonActive : ""
+                } ${option.value !== "ALL" ? styles[`segment${option.value}`] : ""}`}
+                onClick={() => setSegmentFilter(option.value)}
+              >
+                {option.label}
+                <span className={styles.filterCount}>({option.count})</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Content */}
@@ -245,18 +254,18 @@ export default function DashboardPage() {
       ) : filteredInterviews.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyText}>
-            {filter === "ALL"
+            {statusFilter === "ALL" && segmentFilter === "ALL"
               ? "インタビューがありません。動画をアップロードして始めましょう。"
-              : `「${filterOptions.find((o) => o.value === filter)?.label}」のインタビューはありません。`}
+              : "条件に一致するインタビューがありません。"}
           </p>
-          {filter === "ALL" && (
+          {statusFilter === "ALL" && segmentFilter === "ALL" && (
             <Link href="/upload" className={styles.uploadButtonSecondary}>
               動画をアップロード
             </Link>
           )}
         </div>
       ) : (
-        <div className={styles.interviewList}>
+        <div className={styles.interviewGrid}>
           {filteredInterviews.map((interview) => (
             <InterviewCard key={interview.interview_id} interview={interview} />
           ))}
