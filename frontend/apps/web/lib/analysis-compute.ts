@@ -10,6 +10,7 @@ import type {
   AnalysisSignalDetails,
   ComputedScores,
   DerivedAnalysisFields,
+  Evidence,
   JudgmentLabel,
   Segment,
   ScoringConditions,
@@ -251,4 +252,139 @@ export function formatPriceRange(
   if (max === null) return `${min.toLocaleString()}円〜`;
   if (min === max) return `${min.toLocaleString()}円`;
   return `${min.toLocaleString()}〜${max.toLocaleString()}円`;
+}
+
+// =============================================================================
+// Evidence Functions (v2.1)
+// =============================================================================
+
+/**
+ * Get evidences filtered by signal type.
+ */
+export function getEvidencesBySignalType(
+  evidences: Evidence[],
+  signalType: string
+): Evidence[] {
+  return evidences.filter((e) => e.signal_type === signalType);
+}
+
+/**
+ * Get only matched evidences (high confidence, found).
+ */
+export function getMatchedEvidences(evidences: Evidence[]): Evidence[] {
+  return evidences.filter((e) => e.evidence_status === "matched");
+}
+
+/**
+ * Get only weak evidences (low confidence).
+ */
+export function getWeakEvidences(evidences: Evidence[]): Evidence[] {
+  return evidences.filter((e) => e.evidence_status === "weak");
+}
+
+/**
+ * Get only missing evidences (not found).
+ */
+export function getMissingEvidences(evidences: Evidence[]): Evidence[] {
+  return evidences.filter((e) => e.evidence_status === "missing");
+}
+
+/**
+ * Filter evidences by minimum confidence threshold.
+ */
+export function filterEvidencesByConfidence(
+  evidences: Evidence[],
+  minConfidence: number
+): Evidence[] {
+  return evidences.filter((e) => e.confidence >= minConfidence);
+}
+
+/**
+ * Normalize evidences from AnalysisSignalDetails.
+ * Returns the evidences array if present, otherwise returns empty array.
+ * This handles both new v2.1 format (evidences[]) and legacy format (evidence map).
+ */
+export function normalizeEvidences(
+  signalDetails: AnalysisSignalDetails | null | undefined
+): Evidence[] {
+  if (!signalDetails) {
+    return [];
+  }
+
+  // Prefer new evidences array format
+  if (signalDetails.evidences && Array.isArray(signalDetails.evidences)) {
+    return signalDetails.evidences;
+  }
+
+  // Legacy format: evidence map - return empty array
+  // (cannot convert to structured Evidence without transcript data)
+  return [];
+}
+
+/**
+ * Get the primary (highest confidence) evidence for a signal type.
+ */
+export function getPrimaryEvidence(
+  evidences: Evidence[],
+  signalType: string
+): Evidence | null {
+  const matches = getEvidencesBySignalType(evidences, signalType);
+  if (matches.length === 0) {
+    return null;
+  }
+
+  // Sort by confidence descending and return first
+  const sorted = matches.sort((a, b) => b.confidence - a.confidence);
+  return sorted[0] ?? null;
+}
+
+/**
+ * Get alternative evidences for a signal type (excluding primary).
+ */
+export function getAlternativeEvidences(
+  evidences: Evidence[],
+  signalType: string
+): Evidence[] {
+  const matches = getEvidencesBySignalType(evidences, signalType);
+  if (matches.length <= 1) {
+    return [];
+  }
+
+  // Sort by confidence descending and return all except first
+  const sorted = matches.sort((a, b) => b.confidence - a.confidence);
+  return sorted.slice(1);
+}
+
+/**
+ * Check if an evidence is considered reliable.
+ * Reliable = matched status OR confidence >= 0.7
+ */
+export function isReliableEvidence(evidence: Evidence): boolean {
+  return evidence.evidence_status === "matched" || evidence.confidence >= 0.7;
+}
+
+/**
+ * Format timestamp for display (mm:ss or hh:mm:ss).
+ */
+export function formatEvidenceTimestamp(seconds: number): string {
+  if (seconds < 0) return "-";
+
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Format evidence timestamp range for display.
+ */
+export function formatEvidenceTimeRange(evidence: Evidence): string {
+  if (evidence.transcript_index < 0) {
+    return "-";
+  }
+  return `${formatEvidenceTimestamp(evidence.timestamp_start)} - ${formatEvidenceTimestamp(evidence.timestamp_end)}`;
 }

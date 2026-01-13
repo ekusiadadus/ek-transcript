@@ -84,7 +84,7 @@ export interface GetVideoUrlResponse {
 }
 
 // =============================================================================
-// Enum Types (v2)
+// Enum Types (v2.1)
 // =============================================================================
 
 export type BillCheckFrequency = "monthly" | "few_months" | "rarely";
@@ -92,8 +92,48 @@ export type AppUsageFrequency = "daily" | "weekly_few" | "monthly_few" | "rarely
 export type ReplacementIntention = "immediate" | "consider" | "no_replace";
 export type PurchaseChannel = "amazon" | "electronics_store" | "official_site" | "builder" | "other";
 export type PurchaseTiming = "within_3_months" | "within_6_months" | "within_1_year" | "over_1_year" | "unknown";
+
+// v2.1: Segment types separated for clarity
 export type Segment = "A" | "B" | "C" | "D";
+export type UserSegment = "A" | "B" | "C" | "D";
+export type ProductSegment = "HEMS" | "EV" | "Solar" | "Storage" | "Other";
+
 export type JudgmentLabel = "最優先ターゲット" | "有望ターゲット" | "要検討" | "ターゲット外";
+export type JudgmentType = "priority" | "promising" | "review" | "outside";
+
+// v2.1: Review status for marking interviews as reviewed
+export type ReviewStatus = "unreviewed" | "reviewed";
+
+// v2.1: Evidence status for confidence tracking
+export type EvidenceStatus = "matched" | "weak" | "missing";
+
+// =============================================================================
+// Evidence Type (v2.1) - Structured evidence with confidence
+// =============================================================================
+
+export interface Evidence {
+  signal_type: string;
+  label: string;
+  transcript_index: number;
+  timestamp_start: number;
+  timestamp_end: number;
+  speaker: string;
+  quote: string;
+  confidence: number; // 0.0 - 1.0
+  evidence_status: EvidenceStatus;
+}
+
+// =============================================================================
+// TranscriptSegment Type (v2.1) - Formal transcript segment definition
+// =============================================================================
+
+export interface TranscriptSegment {
+  index: number;
+  start_sec: number;
+  end_sec: number;
+  speaker: string;
+  text: string;
+}
 
 // =============================================================================
 // Analysis JSON types from S3 (v2)
@@ -204,8 +244,10 @@ export interface AnalysisSignalDetails {
   // Additional signals (always array, never null)
   additional_good_signals: string[];
   additional_bad_signals: string[];
-  // Evidence (optional, for debugging/review)
-  evidence: Record<string, string> | null;
+  // v2.1: Structured evidences with confidence (preferred)
+  evidences?: Evidence[];
+  // Legacy: Evidence map (deprecated, for backward compatibility)
+  evidence?: Record<string, string> | null;
 }
 
 export interface AnalysisInsights {

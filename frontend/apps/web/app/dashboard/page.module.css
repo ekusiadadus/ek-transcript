@@ -110,6 +110,11 @@
   opacity: 0.7;
 }
 
+.totalCount {
+  opacity: 0.5;
+  font-weight: 400;
+}
+
 .interviewList {
   display: flex;
   flex-direction: column;

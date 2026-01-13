@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, type FormEvent } from "react";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth-context";
 import { listInterviews, getVideoUrl, type Interview, type AnalysisData } from "../../lib/graphql";
+import {
+  InterviewFilter,
+  defaultFilterState,
+  type InterviewFilterState,
+} from "../../components/InterviewFilter";
 import styles from "./page.module.css";
 
 function AuthForm() {
@@ -677,11 +682,125 @@ function InterviewDetailPanel({ interview }: { interview: InterviewWithAnalysis 
   );
 }
 
+/**
+ * Filter interviews based on filter state
+ */
+function filterInterviews(
+  interviews: InterviewWithAnalysis[],
+  filters: InterviewFilterState
+): InterviewWithAnalysis[] {
+  return interviews.filter((interview) => {
+    // Product segment filter (uses interview.segment field)
+    if (filters.productSegment && interview.segment !== filters.productSegment) {
+      return false;
+    }
+
+    // User segment filter (uses analysisData.scoring.segment)
+    if (filters.userSegment) {
+      const userSeg = interview.analysisData?.scoring?.segment;
+      if (userSeg !== filters.userSegment) {
+        return false;
+      }
+    }
+
+    // Processing status filter
+    if (filters.status) {
+      const status = interview.status || "pending";
+      if (status !== filters.status) {
+        return false;
+      }
+    }
+
+    // Judgment filter
+    if (filters.judgment) {
+      const score = interview.total_score;
+      if (score === null || score === undefined) {
+        return false;
+      }
+      const judgmentMap: Record<string, [number, number]> = {
+        priority: [25, 30],
+        promising: [18, 24],
+        review: [12, 17],
+        outside: [0, 11],
+      };
+      const [min, max] = judgmentMap[filters.judgment] || [0, 30];
+      if (score < min || score > max) {
+        return false;
+      }
+    }
+
+    // Score range filter
+    if (filters.scoreMin !== null) {
+      const score = interview.total_score;
+      if (score === null || score === undefined || score < filters.scoreMin) {
+        return false;
+      }
+    }
+    if (filters.scoreMax !== null) {
+      const score = interview.total_score;
+      if (score === null || score === undefined || score > filters.scoreMax) {
+        return false;
+      }
+    }
+
+    // Date range filter
+    if (filters.dateFrom) {
+      const interviewDate = new Date(interview.created_at);
+      const fromDate = new Date(filters.dateFrom);
+      if (interviewDate < fromDate) {
+        return false;
+      }
+    }
+    if (filters.dateTo) {
+      const interviewDate = new Date(interview.created_at);
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999); // End of day
+      if (interviewDate > toDate) {
+        return false;
+      }
+    }
+
+    // Keyword search (file name, summary)
+    if (filters.keyword) {
+      const keyword = filters.keyword.toLowerCase();
+      const fileName = (interview.file_name || "").toLowerCase();
+      const summary = (interview.analysisData?.summary || "").toLowerCase();
+      const interviewId = interview.interview_id.toLowerCase();
+      if (
+        !fileName.includes(keyword) &&
+        !summary.includes(keyword) &&
+        !interviewId.includes(keyword)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 function Dashboard() {
   const [interviews, setInterviews] = useState<InterviewWithAnalysis[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<InterviewFilterState>(defaultFilterState);
+
+  // Filter change handler
+  const handleFilterChange = useCallback((newFilters: InterviewFilterState) => {
+    setFilters(newFilters);
+  }, []);
+
+  // Filter reset handler
+  const handleFilterReset = useCallback(() => {
+    setFilters(defaultFilterState);
+  }, []);
+
+  // Filtered interviews
+  const filteredInterviews = useMemo(
+    () => filterInterviews(interviews, filters),
+    [interviews, filters]
+  );
 
   useEffect(() => {
     async function fetchInterviews() {
@@ -724,8 +843,8 @@ function Dashboard() {
     fetchInterviews();
   }, []);
 
-  const stats = useMemo(() => calculateStats(interviews), [interviews]);
-  const selectedInterview = interviews.find(i => i.interview_id === selectedId);
+  const stats = useMemo(() => calculateStats(filteredInterviews), [filteredInterviews]);
+  const selectedInterview = filteredInterviews.find(i => i.interview_id === selectedId);
 
   if (loading) {
     return <div className={styles.loading}>Loading interviews...</div>;
@@ -748,9 +867,22 @@ function Dashboard() {
     <div className={styles.content}>
       {/* Left sidebar - Interview list */}
       <div className={styles.sidebar}>
-        <h2 className={styles.sidebarTitle}>インタビュー履歴 ({interviews.length})</h2>
+        <h2 className={styles.sidebarTitle}>
+          インタビュー履歴 ({filteredInterviews.length}
+          {filteredInterviews.length !== interviews.length && (
+            <span className={styles.totalCount}> / {interviews.length}</span>
+          )}
+          )
+        </h2>
+        <InterviewFilter
+          filters={filters}
+          onChange={handleFilterChange}
+          onReset={handleFilterReset}
+          collapsible
+          defaultExpanded={false}
+        />
         <div className={styles.interviewList}>
-          {interviews.map((interview) => (
+          {filteredInterviews.map((interview) => (
             <div
               key={interview.interview_id}
               className={`${styles.interviewItem} ${selectedId === interview.interview_id ? styles.interviewItemSelected : ""}`}
