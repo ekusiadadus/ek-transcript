@@ -305,3 +305,4 @@ secrets.json
 # Docker
 *.tar
 test-assets/*
+ cdk/cdk.out.appsync/*
