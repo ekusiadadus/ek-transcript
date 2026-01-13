@@ -14,6 +14,8 @@ import {
   signOut,
   signUp,
   confirmSignUp,
+  resetPassword,
+  confirmResetPassword,
   fetchAuthSession,
   type AuthUser,
 } from "aws-amplify/auth";
@@ -32,6 +34,8 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  confirmResetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   getAccessToken: () => Promise<string | null>;
 }
 
@@ -87,6 +91,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const handleResetPassword = async (email: string) => {
+    await resetPassword({ username: email });
+  };
+
+  const handleConfirmResetPassword = async (
+    email: string,
+    code: string,
+    newPassword: string
+  ) => {
+    await confirmResetPassword({
+      username: email,
+      confirmationCode: code,
+      newPassword,
+    });
+  };
+
   const getAccessToken = async (): Promise<string | null> => {
     try {
       const session = await fetchAuthSession();
@@ -106,6 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp: handleSignUp,
         confirmSignUp: handleConfirmSignUp,
         signOut: handleSignOut,
+        resetPassword: handleResetPassword,
+        confirmResetPassword: handleConfirmResetPassword,
         getAccessToken,
       }}
     >
