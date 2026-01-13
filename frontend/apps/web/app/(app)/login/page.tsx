@@ -42,9 +42,16 @@ export default function LoginPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "サインインに失敗しました";
       // Handle common Amplify auth errors
-      if (message.includes("UserNotFoundException") || message.includes("NotAuthorizedException")) {
+      if (
+        message.includes("UserNotFoundException") ||
+        message.includes("NotAuthorizedException") ||
+        message.includes("Incorrect username or password")
+      ) {
         setError("メールアドレスまたはパスワードが正しくありません");
-      } else if (message.includes("UserNotConfirmedException")) {
+      } else if (
+        message.includes("UserNotConfirmedException") ||
+        message.includes("not confirmed")
+      ) {
         setError("アカウントが確認されていません。確認コードを入力してください。");
         setMode("confirm");
       } else {
