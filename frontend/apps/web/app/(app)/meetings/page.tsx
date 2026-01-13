@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../lib/auth-context";
+import { useAuth } from "../../../lib/auth-context";
 import {
   listMeetings,
   createMeeting,
@@ -16,8 +16,8 @@ import {
   type MeetingStatus,
   type CreateMeetingInput,
   type Recording,
-} from "../../lib/graphql";
-import { GoogleConnectButton } from "../../components/GoogleConnectButton";
+} from "../../../lib/graphql";
+import { GoogleConnectButton } from "../../../components/GoogleConnectButton";
 import styles from "./page.module.css";
 
 type ViewMode = "list" | "calendar";
@@ -434,6 +434,7 @@ function CalendarView({ meetings, recordings, currentMonth, onMonthChange }: Cal
   const formatWeekRange = () => {
     const start = weekDays[0];
     const end = weekDays[6];
+    if (!start || !end) return "";
     if (start.getMonth() === end.getMonth()) {
       return `${start.getFullYear()}年${start.getMonth() + 1}月`;
     }

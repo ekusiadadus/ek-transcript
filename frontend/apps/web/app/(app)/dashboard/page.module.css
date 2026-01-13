@@ -1,0 +1,312 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.uploadButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--accent);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.uploadButton:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Stats */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background-color: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.statValue {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.statLabel {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.filterButton {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filterButton:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.filterButtonActive {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.filterButtonActive:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* Interview List */
+.interviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.interviewCard {
+  background-color: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  padding: 20px 24px;
+  transition: all 0.2s ease;
+}
+
+.interviewCardClickable {
+  cursor: pointer;
+}
+
+.interviewCardClickable:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
+}
+
+.interviewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.interviewTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 12px;
+}
+
+.statusCompleted {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.statusProcessing {
+  background-color: rgba(0, 122, 255, 0.15);
+  color: var(--accent);
+}
+
+.statusPending {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: rgb(180, 140, 0);
+}
+
+.statusFailed {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+}
+
+.interviewMeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.interviewDate {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.interviewSegment {
+  font-size: 12px;
+  padding: 2px 8px;
+  background-color: var(--gray-alpha-100);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.progressBar {
+  height: 4px;
+  background-color: var(--gray-alpha-200);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.interviewActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.viewButton {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.viewButton:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+/* Loading / Error / Empty */
+.loading,
+.error,
+.empty {
+  text-align: center;
+  padding: 64px 24px;
+}
+
+.loading {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--error);
+}
+
+.emptyText {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.uploadButtonSecondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  background-color: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.uploadButtonSecondary:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+/* Auth Prompt */
+.authPrompt {
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.authTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.authDescription {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.signInButton {
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.signInButton:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}

@@ -1,0 +1,639 @@
+/**
+ * Interview Detail Page Styles
+ * Video-Transcript Sync (US-7, US-8)
+ */
+
+.page {
+  min-height: 100vh;
+  background-color: var(--background);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--divider);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 50%;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.headerLink {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.headerLink:hover {
+  background-color: var(--gray-alpha-100);
+  color: var(--text-primary);
+}
+
+/* Main Content Layout */
+.content {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 24px;
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1200px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Column - Video & Analysis */
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Right Column - Transcript */
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .sideColumn {
+    order: 2;
+  }
+}
+
+/* Video Section */
+.videoSection {
+  background-color: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.videoContainer {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  background-color: #000;
+}
+
+.videoContainer > :global(*) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Transcript Section */
+.transcriptSection {
+  background-color: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 180px);
+  position: sticky;
+  top: 80px;
+}
+
+.transcriptHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.transcriptTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.syncToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.syncToggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.transcriptContent {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Analysis Section */
+.analysisSection {
+  background-color: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.sectionTitleSmall {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Summary Card */
+.summaryCard {
+  background-color: var(--gray-alpha-50);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.summaryText {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+/* Score Grid */
+.scoreGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .scoreGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scoreCard {
+  background-color: var(--gray-alpha-50);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.scoreLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.scoreValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.scoreMax {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* Signals Section */
+.signalsSection {
+  margin-bottom: 24px;
+}
+
+.signalsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .signalsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.signalGroup {
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.signalGroupGood {
+  background-color: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.signalGroupBad {
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.signalGroupTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.signalGroupTitleGood {
+  color: var(--success);
+}
+
+.signalGroupTitleBad {
+  color: var(--error);
+}
+
+.signalList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signalItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.signalIcon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.signalIconGood {
+  color: var(--success);
+}
+
+.signalIconBad {
+  color: var(--error);
+}
+
+/* Insights Section */
+.insightsSection {
+  margin-bottom: 24px;
+}
+
+.insightsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.insightCard {
+  background-color: var(--gray-alpha-50);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.insightLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.insightText {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.insightQuote {
+  font-style: italic;
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  margin: 0;
+}
+
+/* Action Items */
+.actionItems {
+  margin-bottom: 24px;
+}
+
+.actionList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actionItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--gray-alpha-50);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.actionIcon {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+/* Meta Info */
+.metaSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.metaLabel {
+  font-weight: 500;
+}
+
+/* Processing View */
+.processingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.processingIcon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); }
+}
+
+.processingTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.currentStepText {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.progressBar {
+  width: 100%;
+  max-width: 400px;
+  height: 8px;
+  background-color: var(--gray-alpha-200);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+
+.processingNote {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 400px;
+}
+
+/* Failed View */
+.failedContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.failedIcon {
+  font-size: 64px;
+  margin-bottom: 24px;
+}
+
+.failedTitle {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--error);
+  margin-bottom: 12px;
+}
+
+.failedMessage {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  max-width: 400px;
+  padding: 12px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}
+
+.retryButton {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.retryButton:hover {
+  background-color: var(--accent-hover);
+}
+
+/* Loading / Error States */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.loading {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.errorText {
+  font-size: 16px;
+  color: var(--error);
+}
+
+/* Empty State */
+.emptyTranscript {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.emptyText {
+  font-size: 14px;
+}
+
+/* No Analysis State */
+.noAnalysis {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.noAnalysisText {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+/* Segment Badge */
+.segmentBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 16px;
+}
+
+.segmentA {
+  background-color: rgba(230, 184, 0, 0.15);
+  color: var(--gold);
+}
+
+.segmentB {
+  background-color: rgba(0, 122, 255, 0.15);
+  color: var(--accent);
+}
+
+.segmentC {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.segmentD {
+  background-color: var(--gray-alpha-200);
+  color: var(--text-secondary);
+}
+
+/* Judgment Badge */
+.judgmentBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 20px;
+}
+
+.judgmentPriority {
+  background-color: rgba(230, 184, 0, 0.15);
+  color: var(--gold);
+}
+
+.judgmentPromising {
+  background-color: rgba(0, 122, 255, 0.15);
+  color: var(--accent);
+}
+
+.judgmentReview {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: rgb(180, 140, 0);
+}
+
+.judgmentOutside {
+  background-color: var(--gray-alpha-200);
+  color: var(--text-secondary);
+}

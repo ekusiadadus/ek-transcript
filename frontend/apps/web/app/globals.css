@@ -1,8 +1,72 @@
+/**
+ * EK Transcript Design System
+ * Color Palette - Apple HIG inspired (White, Black, Blue accent)
+ * Contrast ratio: 4.5:1 minimum for text
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background colors */
+  --background: #f9f9f9;
+  --surface: #ffffff;
+
+  /* Text colors */
+  --text-primary: #111111;
+  --text-secondary: #666666;
+
+  /* Accent colors (Apple Blue) */
+  --accent: #007aff;
+  --accent-hover: #0056b3;
+  --accent-rgb: 0, 122, 255;
+
+  /* Status colors */
+  --success: #22c55e;
+  --success-rgb: 34, 197, 94;
+  --warning: #eab308;
+  --warning-rgb: 234, 179, 8;
+  --error: #ef4444;
+  --error-rgb: 239, 68, 68;
+
+  /* Gold - for special highlights only */
+  --gold: #e6b800;
+  --gold-hover: #cc9f00;
+
+  /* Divider colors */
+  --divider: #e0e0e0;
+
+  /* Gray alpha (for overlays) */
+  --gray-rgb: 0, 0, 0;
+  --gray-alpha-50: rgba(var(--gray-rgb), 0.02);
+  --gray-alpha-100: rgba(var(--gray-rgb), 0.05);
+  --gray-alpha-200: rgba(var(--gray-rgb), 0.08);
+  --gray-alpha-300: rgba(var(--gray-rgb), 0.12);
+
+  /* Dark section colors */
+  --dark-bg: #111111;
+  --dark-surface: #1e1e1e;
+  --dark-text: #f1f1f1;
+  --dark-text-secondary: #aaaaaa;
+  --dark-divider: #333333;
+
+  /* Legacy variables for compatibility */
+  --foreground: var(--text-primary);
+
+  /* Speaker colors for transcript */
+  --speaker-a: rgba(59, 130, 246, 0.2);
+  --speaker-b: rgba(34, 197, 94, 0.2);
+  --speaker-c: rgba(234, 179, 8, 0.2);
+  --speaker-d: rgba(168, 85, 247, 0.2);
+
+  /* Primary alias */
+  --primary: var(--accent);
+  --primary-50: #eff6ff;
 }
 
+/**
+ * Color aliases for consistency
+ */
+
+/**
+ * Base styles
+ */
 html,
 body {
   max-width: 100vw;
@@ -10,8 +74,18 @@ body {
 }
 
 body {
-  color: var(--foreground);
   background: var(--background);
+  color: var(--text-primary);
+  font-family:
+    var(--font-geist-sans),
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
 }
 
 * {
@@ -23,4 +97,164 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/**
+ * Utility classes for the design system
+ */
+.bg-surface {
+  background-color: var(--surface);
+}
+
+.bg-background {
+  background-color: var(--background);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.border-divider {
+  border-color: var(--divider);
+}
+
+/**
+ * Blue accent button styles (primary CTA)
+ */
+.btn-accent {
+  background-color: var(--accent);
+  color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-accent:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/**
+ * Gold button styles (special highlights only)
+ */
+.btn-gold {
+  background-color: var(--gold);
+  color: #111111;
+  transition: background-color 0.2s ease;
+}
+
+.btn-gold:hover {
+  background-color: var(--gold-hover);
+}
+
+/**
+ * Outline button styles
+ */
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--divider);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover {
+  background-color: var(--gray-alpha-100);
+  border-color: var(--text-primary);
+}
+
+/**
+ * Status badge styles
+ */
+.badge-success {
+  background-color: rgba(var(--success-rgb), 0.15);
+  color: var(--success);
+}
+
+.badge-warning {
+  background-color: rgba(var(--warning-rgb), 0.15);
+  color: rgb(180, 140, 0);
+}
+
+.badge-error {
+  background-color: rgba(var(--error-rgb), 0.15);
+  color: var(--error);
+}
+
+.badge-accent {
+  background-color: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+}
+
+/**
+ * Japanese Typography Optimization
+ */
+h1,
+h2,
+h3 {
+  font-feature-settings: 'palt' 1; /* Proportional metrics for Japanese */
+  word-break: auto-phrase; /* Natural line breaks (Chrome 119+) */
+  line-height: 1.3; /* Optimal line height for Japanese */
+}
+
+h1 {
+  letter-spacing: -0.02em; /* Tighten letter spacing for large headings */
+}
+
+/**
+ * Focus styles for accessibility
+ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/**
+ * Selection styles
+ */
+::selection {
+  background-color: rgba(var(--accent-rgb), 0.2);
+}
+
+/**
+ * Scrollbar styles (webkit)
+ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-alpha-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-alpha-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/**
+ * Smooth scroll behavior
+ */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
