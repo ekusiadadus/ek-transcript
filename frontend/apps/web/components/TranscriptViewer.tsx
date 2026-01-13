@@ -64,7 +64,7 @@ export const TranscriptViewer = forwardRef<TranscriptViewerRef, TranscriptViewer
       transcriptKey,
       highlightIndex = -1,
       currentTime = 0,
-      syncEnabled: initialSyncEnabled = true,
+      syncEnabled = true,
       onSegmentClick,
       onTimestampClick,
     },
@@ -72,7 +72,6 @@ export const TranscriptViewer = forwardRef<TranscriptViewerRef, TranscriptViewer
   ) {
     const listRef = useRef<HTMLDivElement>(null);
     const segmentRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const [syncEnabled, setSyncEnabled] = useState(initialSyncEnabled);
     const [activeIndex, setActiveIndex] = useState(-1);
 
     const { data, loading, error } = useS3Content<TranscriptSegment[]>(transcriptKey);
@@ -143,11 +142,15 @@ export const TranscriptViewer = forwardRef<TranscriptViewerRef, TranscriptViewer
     const handleSegmentClick = useCallback(
       (segment: TranscriptSegment, index: number) => {
         setActiveIndex(index);
+        // Trigger video skip when segment is clicked
+        if (onTimestampClick) {
+          onTimestampClick(segment.start);
+        }
         if (onSegmentClick) {
           onSegmentClick(segment, index);
         }
       },
-      [onSegmentClick]
+      [onSegmentClick, onTimestampClick]
     );
 
     const handleTimestampClick = useCallback(
@@ -186,16 +189,6 @@ export const TranscriptViewer = forwardRef<TranscriptViewerRef, TranscriptViewer
 
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <span className={styles.headerTitle}>文字起こし</span>
-          <button
-            className={`${styles.syncToggle} ${syncEnabled ? styles.active : ""}`}
-            onClick={() => setSyncEnabled(!syncEnabled)}
-          >
-            {syncEnabled ? "🔗 同期ON" : "🔗 同期OFF"}
-          </button>
-        </div>
-
         <div ref={listRef} className={styles.transcriptList}>
           {data.map((segment, index) => (
             <div

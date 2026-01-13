@@ -75,20 +75,57 @@ describe("TranscriptViewer", () => {
       });
     });
 
-    describe("Sync Toggle", () => {
-      it("should render sync toggle button", () => {
-        render(<TranscriptViewer transcriptKey="test-key" />);
+    describe("Sync Control", () => {
+      it("should respect syncEnabled prop for auto-scroll behavior", async () => {
+        // When syncEnabled is false, should not auto-scroll on currentTime change
+        const { rerender } = render(
+          <TranscriptViewer
+            transcriptKey="test-key"
+            currentTime={0}
+            syncEnabled={false}
+          />
+        );
 
-        expect(screen.getByText(/同期ON/)).toBeInTheDocument();
+        // Change currentTime - should NOT trigger scroll when sync is disabled
+        rerender(
+          <TranscriptViewer
+            transcriptKey="test-key"
+            currentTime={15}
+            syncEnabled={false}
+          />
+        );
+
+        // scrollIntoView should not be called when sync is disabled
+        // (Note: Initial render may call it, so we check it wasn't called again)
+        const callCount = (Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>).mock.calls.length;
+
+        // Rerender again
+        rerender(
+          <TranscriptViewer
+            transcriptKey="test-key"
+            currentTime={25}
+            syncEnabled={false}
+          />
+        );
+
+        // Call count should remain the same (no new scroll)
+        expect((Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callCount);
       });
 
-      it("should toggle sync state when button is clicked", () => {
-        render(<TranscriptViewer transcriptKey="test-key" />);
+      it("should auto-scroll when syncEnabled is true", async () => {
+        vi.mocked(Element.prototype.scrollIntoView).mockClear();
 
-        const toggleButton = screen.getByText(/同期ON/);
-        fireEvent.click(toggleButton);
+        const { rerender } = render(
+          <TranscriptViewer
+            transcriptKey="test-key"
+            currentTime={5}
+            syncEnabled={true}
+          />
+        );
 
-        expect(screen.getByText(/同期OFF/)).toBeInTheDocument();
+        await waitFor(() => {
+          expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+        });
       });
     });
 
