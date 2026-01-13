@@ -27,7 +27,6 @@ export const LIST_INTERVIEWS = /* GraphQL */ `
     listInterviews(limit: $limit, nextToken: $nextToken) {
       items {
         interview_id
-        project_id
         segment
         created_at
         status
@@ -46,6 +45,19 @@ export const LIST_INTERVIEWS = /* GraphQL */ `
     }
   }
 `;
+
+// NOTE: project_id will be added after CDK deployment
+// export const LIST_INTERVIEWS_WITH_PROJECT = /* GraphQL */ `
+//   query ListInterviews($limit: Int, $nextToken: String) {
+//     listInterviews(limit: $limit, nextToken: $nextToken) {
+//       items {
+//         interview_id
+//         project_id
+//         ...
+//       }
+//     }
+//   }
+// `;
 
 export const LIST_INTERVIEWS_BY_SEGMENT = /* GraphQL */ `
   query ListInterviewsBySegment(
