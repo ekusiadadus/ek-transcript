@@ -1,0 +1,291 @@
+/**
+ * EvidenceLink Component Styles (v2.1)
+ */
+
+.evidenceCard {
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--gray-200);
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.evidenceCard:hover {
+  background-color: var(--gray-50);
+}
+
+/* Status: matched (normal) */
+.evidenceCard.matched {
+  border-color: var(--success);
+  background-color: var(--success-50, #f0fdf4);
+}
+
+.evidenceCard.matched:hover {
+  background-color: #ecfdf5;
+}
+
+/* Status: weak (low confidence) */
+.evidenceCard.weak {
+  border-color: var(--warning);
+  background-color: var(--warning-50, #fffbeb);
+}
+
+.evidenceCard.weak:hover {
+  background-color: #fef3c7;
+}
+
+/* Status: missing (not found) */
+.evidenceCard.missing {
+  border-color: var(--error);
+  background-color: var(--error-50, #fef2f2);
+  cursor: default;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.signalLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-900);
+}
+
+.signalIcon {
+  font-size: 16px;
+}
+
+.signalIcon.good {
+  color: var(--success);
+}
+
+.signalIcon.bad {
+  color: var(--error);
+}
+
+/* Status badge */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.statusBadge.matched {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.statusBadge.weak {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.statusBadge.missing {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Quote section */
+.quoteSection {
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.quoteIcon {
+  color: var(--primary);
+  margin-right: 4px;
+}
+
+.quoteText {
+  font-size: 14px;
+  color: var(--gray-700);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Metadata row */
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.speakerTimestamp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.speaker {
+  font-weight: 500;
+  color: var(--gray-600);
+}
+
+.timestamp {
+  font-family: var(--font-mono);
+  color: var(--primary);
+}
+
+.timestamp:hover {
+  text-decoration: underline;
+}
+
+.jumpIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background-color: var(--gray-100);
+  color: var(--gray-500);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.jumpIcon:hover {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* Confidence meter */
+.confidenceMeter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--warning);
+}
+
+.confidenceBar {
+  width: 40px;
+  height: 4px;
+  background-color: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.confidenceFill {
+  height: 100%;
+  background-color: var(--warning);
+  transition: width 0.3s ease;
+}
+
+/* Alternative candidates (for weak status) */
+.candidateSection {
+  margin-top: 12px;
+  border-top: 1px solid var(--gray-200);
+  padding-top: 12px;
+}
+
+.candidateToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gray-600);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.candidateToggle:hover {
+  color: var(--primary);
+}
+
+.candidateList {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: var(--gray-50);
+  border-radius: 6px;
+}
+
+.candidateItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.candidateItem:last-child {
+  border-bottom: none;
+}
+
+.candidateItem:hover {
+  background-color: var(--gray-100);
+  margin: 0 -12px;
+  padding: 8px 12px;
+}
+
+.candidateQuote {
+  flex: 1;
+  color: var(--gray-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidateMeta {
+  color: var(--gray-500);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+/* Missing evidence state */
+.missingContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.missingIcon {
+  font-size: 24px;
+  color: var(--gray-400);
+}
+
+.missingText {
+  font-size: 14px;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.searchAroundButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  background-color: var(--primary-50, #eff6ff);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.searchAroundButton:hover {
+  background-color: var(--primary-100, #dbeafe);
+}

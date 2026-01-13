@@ -1,0 +1,91 @@
+/**
+ * VideoPlayer Component Styles (v2.1)
+ */
+
+.container {
+  position: relative;
+  width: 100%;
+  background-color: var(--gray-900);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.videoPlayer {
+  width: 100%;
+  height: auto;
+  display: block;
+  aspect-ratio: 16 / 9;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  color: var(--gray-400);
+  font-size: 14px;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  color: var(--error);
+  font-size: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Seeking indicator */
+.seekingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.seekingOverlay.visible {
+  opacity: 1;
+}
+
+.seekingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+}
+
+/* Controls overlay */
+.controlsOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.container:hover .controlsOverlay {
+  opacity: 1;
+}
+
+.currentTime {
+  color: white;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}

@@ -1,0 +1,183 @@
+/**
+ * InterviewFilter Styles (v2.1)
+ */
+
+.container {
+  background: var(--background, #fff);
+  border: 1px solid var(--gray-alpha-200, rgba(0, 0, 0, 0.08));
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.headerToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+.headerTitle {
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.headerIcon {
+  font-size: 10px;
+  color: var(--gray-500);
+}
+
+.activeCount {
+  font-family: var(--font-geist-mono);
+  font-size: 12px;
+  color: var(--primary, #2563eb);
+  background-color: var(--primary-50, #eff6ff);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.resetButton {
+  margin-left: auto;
+  font-family: var(--font-geist-sans);
+  font-size: 13px;
+  color: var(--gray-600);
+  background: none;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+  background-color: var(--gray-100);
+  border-color: var(--gray-400);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.searchRow {
+  width: 100%;
+}
+
+.searchInput {
+  width: 100%;
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  background-color: var(--gray-50, #f9fafb);
+  transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--primary, #2563eb);
+  background-color: var(--background, #fff);
+  box-shadow: 0 0 0 3px var(--primary-50, rgba(37, 99, 235, 0.1));
+}
+
+.searchInput::placeholder {
+  color: var(--gray-400);
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.filterItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterLabel {
+  font-family: var(--font-geist-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+}
+
+.filterSelect,
+.filterInput {
+  font-family: var(--font-geist-sans);
+  font-size: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  background-color: var(--background, #fff);
+  transition: all 0.2s ease;
+}
+
+.filterSelect:focus,
+.filterInput:focus {
+  outline: none;
+  border-color: var(--primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--primary-50, rgba(37, 99, 235, 0.1));
+}
+
+.filterSelect {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+.filterInput[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.filterInput[type="number"]::-webkit-outer-spin-button,
+.filterInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.filterInput[type="date"] {
+  cursor: pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .filterGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .activeCount {
+    order: 3;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+}
