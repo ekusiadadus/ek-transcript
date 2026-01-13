@@ -1,5 +1,6 @@
 export interface Interview {
   interview_id: string;
+  project_id?: string | null; // Link to InterviewProject
   segment: string;
   created_at: string;
   status?: string | null;
@@ -18,6 +19,73 @@ export interface Interview {
   updated_at?: string | null;
 }
 
+// =============================================================================
+// Interview Project Types - Define interview context before uploading
+// =============================================================================
+
+/**
+ * Interview Project - Defines the context and purpose of interviews
+ * Created before uploading videos to provide analysis context.
+ */
+export interface InterviewProject {
+  project_id: string;
+  user_id: string;
+  title: string;
+  description?: string | null;
+  recruitment_criteria?: string | null; // Who was recruited for this interview
+  research_questions?: string | null; // What hypotheses are being tested
+  target_persona?: string | null; // Target user attributes
+  status: ProjectStatus;
+  interview_count?: number | null; // Number of interviews in this project
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export type ProjectStatus = "ACTIVE" | "ARCHIVED" | "COMPLETED";
+
+export interface InterviewProjectConnection {
+  items: InterviewProject[];
+  nextToken?: string | null;
+}
+
+export interface CreateInterviewProjectInput {
+  title: string;
+  description?: string | null;
+  recruitment_criteria?: string | null;
+  research_questions?: string | null;
+  target_persona?: string | null;
+}
+
+export interface UpdateInterviewProjectInput {
+  project_id: string;
+  title?: string | null;
+  description?: string | null;
+  recruitment_criteria?: string | null;
+  research_questions?: string | null;
+  target_persona?: string | null;
+  status?: ProjectStatus | null;
+}
+
+export interface GetInterviewProjectResponse {
+  getInterviewProject: InterviewProject | null;
+}
+
+export interface ListInterviewProjectsResponse {
+  listInterviewProjects: InterviewProjectConnection;
+}
+
+export interface CreateInterviewProjectResponse {
+  createInterviewProject: InterviewProject;
+}
+
+export interface UpdateInterviewProjectResponse {
+  updateInterviewProject: InterviewProject;
+}
+
+export interface DeleteInterviewProjectResponse {
+  deleteInterviewProject: InterviewProject;
+}
+
 export interface InterviewConnection {
   items: Interview[];
   nextToken?: string | null;
@@ -25,6 +93,7 @@ export interface InterviewConnection {
 
 export interface CreateInterviewInput {
   interview_id: string;
+  project_id?: string | null; // Link to InterviewProject
   segment: string;
   analysis_key: string;
   transcript_key: string;

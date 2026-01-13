@@ -27,6 +27,7 @@ export const LIST_INTERVIEWS = /* GraphQL */ `
     listInterviews(limit: $limit, nextToken: $nextToken) {
       items {
         interview_id
+        project_id
         segment
         created_at
         status
@@ -181,6 +182,71 @@ export const LIST_RECORDINGS = /* GraphQL */ `
         status
         meeting_id
         interview_id
+      }
+      nextToken
+    }
+  }
+`;
+
+// Interview Project queries
+export const GET_INTERVIEW_PROJECT = /* GraphQL */ `
+  query GetInterviewProject($project_id: ID!) {
+    getInterviewProject(project_id: $project_id) {
+      project_id
+      user_id
+      title
+      description
+      recruitment_criteria
+      research_questions
+      target_persona
+      status
+      interview_count
+      created_at
+      updated_at
+    }
+  }
+`;
+
+export const LIST_INTERVIEW_PROJECTS = /* GraphQL */ `
+  query ListInterviewProjects($limit: Int, $nextToken: String, $status: ProjectStatus) {
+    listInterviewProjects(limit: $limit, nextToken: $nextToken, status: $status) {
+      items {
+        project_id
+        user_id
+        title
+        description
+        recruitment_criteria
+        research_questions
+        target_persona
+        status
+        interview_count
+        created_at
+        updated_at
+      }
+      nextToken
+    }
+  }
+`;
+
+export const LIST_INTERVIEWS_BY_PROJECT = /* GraphQL */ `
+  query ListInterviewsByProject($project_id: ID!, $limit: Int, $nextToken: String) {
+    listInterviewsByProject(project_id: $project_id, limit: $limit, nextToken: $nextToken) {
+      items {
+        interview_id
+        project_id
+        segment
+        created_at
+        status
+        progress
+        current_step
+        error_message
+        analysis_key
+        transcript_key
+        video_key
+        diarization_key
+        total_score
+        user_id
+        file_name
       }
       nextToken
     }

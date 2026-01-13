@@ -1,6 +1,6 @@
 /**
- * updateInterview リゾルバー
- * インタビュー情報更新
+ * updateInterviewProject resolver
+ * Update interview project
  */
 
 import { util } from "@aws-appsync/utils";
@@ -8,19 +8,18 @@ import { util } from "@aws-appsync/utils";
 export function request(ctx) {
   const input = ctx.args.input;
 
-  // 更新式を動的に構築
+  // Build update expression dynamically
   const expressionNames = {};
   const expressionValues = {};
   const updateExpressions = [];
 
   const fields = [
-    "project_id",
-    "segment",
-    "analysis_key",
-    "transcript_key",
-    "video_key",
-    "diarization_key",
-    "total_score",
+    "title",
+    "description",
+    "recruitment_criteria",
+    "research_questions",
+    "target_persona",
+    "status",
   ];
 
   fields.forEach((field) => {
@@ -31,7 +30,7 @@ export function request(ctx) {
     }
   });
 
-  // 更新日時を追加
+  // Add updated_at
   expressionNames["#updated_at"] = "updated_at";
   expressionValues[":updated_at"] = util.time.nowISO8601();
   updateExpressions.push("#updated_at = :updated_at");
@@ -39,7 +38,7 @@ export function request(ctx) {
   return {
     operation: "UpdateItem",
     key: util.dynamodb.toMapValues({
-      interview_id: input.interview_id,
+      project_id: input.project_id,
     }),
     update: {
       expression: `SET ${updateExpressions.join(", ")}`,

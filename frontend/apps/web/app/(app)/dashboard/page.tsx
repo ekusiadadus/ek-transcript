@@ -62,6 +62,7 @@ function getPriorityCount(interviews: Interview[]): number {
     (i) =>
       normalizeStatus(i.status) === "COMPLETED" &&
       i.total_score !== null &&
+      i.total_score !== undefined &&
       i.total_score >= 25
   ).length;
 }

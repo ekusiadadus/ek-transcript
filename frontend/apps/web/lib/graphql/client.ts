@@ -35,9 +35,19 @@ import type {
   SyncMeetRecordingsResponse,
   AnalyzeRecordingResponse,
   ListRecordingsResponse,
+  InterviewProject,
+  InterviewProjectConnection,
+  ProjectStatus,
+  CreateInterviewProjectInput,
+  UpdateInterviewProjectInput,
+  GetInterviewProjectResponse,
+  ListInterviewProjectsResponse,
+  CreateInterviewProjectResponse,
+  UpdateInterviewProjectResponse,
+  DeleteInterviewProjectResponse,
 } from "./types";
-import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT, GET_UPLOAD_URL, GET_VIDEO_URL, GET_MEETING, LIST_MEETINGS, LIST_RECORDINGS } from "./queries";
-import { UPDATE_INTERVIEW, DELETE_INTERVIEW, CREATE_MEETING, UPDATE_MEETING, DELETE_MEETING, SYNC_CALENDAR, SYNC_MEET_RECORDINGS, ANALYZE_RECORDING } from "./mutations";
+import { GET_INTERVIEW, LIST_INTERVIEWS, LIST_INTERVIEWS_BY_SEGMENT, GET_UPLOAD_URL, GET_VIDEO_URL, GET_MEETING, LIST_MEETINGS, LIST_RECORDINGS, GET_INTERVIEW_PROJECT, LIST_INTERVIEW_PROJECTS, LIST_INTERVIEWS_BY_PROJECT } from "./queries";
+import { UPDATE_INTERVIEW, DELETE_INTERVIEW, CREATE_MEETING, UPDATE_MEETING, DELETE_MEETING, SYNC_CALENDAR, SYNC_MEET_RECORDINGS, ANALYZE_RECORDING, CREATE_INTERVIEW_PROJECT, UPDATE_INTERVIEW_PROJECT, DELETE_INTERVIEW_PROJECT } from "./mutations";
 
 const client = generateClient();
 
@@ -245,4 +255,74 @@ export async function listRecordings(status?: RecordingStatus): Promise<Recordin
     variables: { status },
   }) as GraphQLResult<ListRecordingsResponse>;
   return response.data?.listRecordings ?? { items: [], nextToken: null };
+}
+
+// Interview Project functions
+export async function getInterviewProject(projectId: string): Promise<InterviewProject | null> {
+  const response = await client.graphql({
+    query: GET_INTERVIEW_PROJECT,
+    variables: { project_id: projectId },
+  }) as GraphQLResult<GetInterviewProjectResponse>;
+  return response.data?.getInterviewProject ?? null;
+}
+
+export async function listInterviewProjects(
+  limit?: number,
+  nextToken?: string,
+  status?: ProjectStatus
+): Promise<InterviewProjectConnection> {
+  const response = await client.graphql({
+    query: LIST_INTERVIEW_PROJECTS,
+    variables: { limit, nextToken, status },
+  }) as GraphQLResult<ListInterviewProjectsResponse>;
+  return response.data?.listInterviewProjects ?? { items: [], nextToken: null };
+}
+
+interface ListInterviewsByProjectResponse {
+  listInterviewsByProject: InterviewConnection;
+}
+
+export async function listInterviewsByProject(
+  projectId: string,
+  limit?: number,
+  nextToken?: string
+): Promise<InterviewConnection> {
+  const response = await client.graphql({
+    query: LIST_INTERVIEWS_BY_PROJECT,
+    variables: { project_id: projectId, limit, nextToken },
+  }) as GraphQLResult<ListInterviewsByProjectResponse>;
+  return response.data?.listInterviewsByProject ?? { items: [], nextToken: null };
+}
+
+export async function createInterviewProject(input: CreateInterviewProjectInput): Promise<InterviewProject> {
+  const response = await client.graphql({
+    query: CREATE_INTERVIEW_PROJECT,
+    variables: { input },
+  }) as GraphQLResult<CreateInterviewProjectResponse>;
+  if (!response.data?.createInterviewProject) {
+    throw new Error("Failed to create interview project");
+  }
+  return response.data.createInterviewProject;
+}
+
+export async function updateInterviewProject(input: UpdateInterviewProjectInput): Promise<InterviewProject> {
+  const response = await client.graphql({
+    query: UPDATE_INTERVIEW_PROJECT,
+    variables: { input },
+  }) as GraphQLResult<UpdateInterviewProjectResponse>;
+  if (!response.data?.updateInterviewProject) {
+    throw new Error("Failed to update interview project");
+  }
+  return response.data.updateInterviewProject;
+}
+
+export async function deleteInterviewProject(projectId: string): Promise<InterviewProject> {
+  const response = await client.graphql({
+    query: DELETE_INTERVIEW_PROJECT,
+    variables: { project_id: projectId },
+  }) as GraphQLResult<DeleteInterviewProjectResponse>;
+  if (!response.data?.deleteInterviewProject) {
+    throw new Error("Failed to delete interview project");
+  }
+  return response.data.deleteInterviewProject;
 }

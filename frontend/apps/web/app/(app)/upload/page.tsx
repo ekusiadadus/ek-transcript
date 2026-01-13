@@ -1,13 +1,16 @@
 "use client";
 
 /**
- * Upload page - Video upload with drag & drop (US-5, US-6)
+ * Upload page - Video upload with drag & drop (US-5, US-6, US-15)
+ *
+ * Now requires project selection before uploading.
+ * Project can be pre-selected via ?project=ID query parameter.
  */
-import { useState, useCallback, useRef, type ChangeEvent, type DragEvent } from "react";
+import { useState, useCallback, useRef, useEffect, type ChangeEvent, type DragEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../lib/auth-context";
-import { getUploadUrl } from "../../../lib/graphql";
+import { getUploadUrl, getInterviewProject, type InterviewProject } from "../../../lib/graphql";
 import styles from "./page.module.css";
 
 interface UploadFile {
@@ -35,13 +38,43 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "進行中",
+  COMPLETED: "完了",
+  ARCHIVED: "アーカイブ",
+};
+
 export default function UploadPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectIdParam = searchParams.get("project");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<InterviewProject | null>(null);
+  const [loadingProject, setLoadingProject] = useState(false);
+
+  // Load project from query param
+  useEffect(() => {
+    if (!projectIdParam || !isAuthenticated || authLoading) return;
+
+    const fetchProject = async () => {
+      try {
+        setLoadingProject(true);
+        const project = await getInterviewProject(projectIdParam);
+        setSelectedProject(project);
+      } catch (err) {
+        console.error("Failed to load project:", err);
+      } finally {
+        setLoadingProject(false);
+      }
+    };
+
+    fetchProject();
+  }, [projectIdParam, isAuthenticated, authLoading]);
 
   const addFiles = useCallback((newFiles: FileList | File[]) => {
     const validFiles: UploadFile[] = [];
@@ -203,7 +236,12 @@ export default function UploadPage() {
         alert(
           `${successCount} ファイルのアップロードが完了しました。分析を開始します。`
         );
-        router.push("/dashboard");
+        // Navigate to project page if project selected, otherwise dashboard
+        if (selectedProject) {
+          router.push(`/projects/${selectedProject.project_id}`);
+        } else {
+          router.push("/dashboard");
+        }
       }
     }
   };
@@ -232,6 +270,40 @@ export default function UploadPage() {
     );
   }
 
+  // If loading project
+  if (loadingProject) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>プロジェクトを読み込み中...</div>
+      </div>
+    );
+  }
+
+  // If no project selected, show prompt
+  if (!selectedProject) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>動画アップロード</h1>
+          <Link href="/dashboard" className={styles.backLink}>
+            ← Dashboard に戻る
+          </Link>
+        </div>
+
+        <div className={styles.projectPrompt}>
+          <div className={styles.projectPromptIcon}>📁</div>
+          <h2 className={styles.projectPromptTitle}>プロジェクトを選択してください</h2>
+          <p className={styles.projectPromptDescription}>
+            動画をアップロードする前に、インタビュープロジェクトを選択してください。
+          </p>
+          <Link href="/projects" className={styles.selectProjectButton}>
+            プロジェクトを選択
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -239,6 +311,32 @@ export default function UploadPage() {
         <Link href="/dashboard" className={styles.backLink}>
           ← Dashboard に戻る
         </Link>
+      </div>
+
+      {/* Selected Project Info */}
+      <div className={styles.projectSection}>
+        <h2 className={styles.projectSectionTitle}>アップロード先プロジェクト</h2>
+        <div className={styles.projectCard}>
+          <div className={styles.projectCardHeader}>
+            <h3 className={styles.projectCardTitle}>{selectedProject.title}</h3>
+            <span className={styles.projectCardStatus}>
+              {STATUS_LABELS[selectedProject.status]}
+            </span>
+          </div>
+          {selectedProject.description && (
+            <p className={styles.projectCardDescription}>
+              {selectedProject.description}
+            </p>
+          )}
+          <div className={styles.projectCardMeta}>
+            {selectedProject.recruitment_criteria && (
+              <span>対象者: {selectedProject.recruitment_criteria}</span>
+            )}
+          </div>
+          <Link href="/projects" className={styles.changeProjectButton}>
+            プロジェクトを変更
+          </Link>
+        </div>
       </div>
 
       {/* Dropzone */}

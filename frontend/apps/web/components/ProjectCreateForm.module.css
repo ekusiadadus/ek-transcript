@@ -1,0 +1,120 @@
+/**
+ * ProjectCreateForm Component Styles
+ */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text, #111827);
+}
+
+.required {
+  color: var(--color-error, #dc2626);
+  margin-left: 0.25rem;
+}
+
+.input,
+.textarea {
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  color: var(--color-text, #111827);
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-muted, #9ca3af);
+}
+
+.textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.hint {
+  font-size: 0.8125rem;
+  color: var(--color-muted, #6b7280);
+  margin-top: 0.25rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+.cancelButton {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #6b7280);
+  background: transparent;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover {
+  background: var(--color-gray-50, #f9fafb);
+  border-color: var(--color-text-secondary, #6b7280);
+}
+
+.submitButton {
+  padding: 0.625rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-primary, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: var(--color-primary-hover, #2563eb);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .cancelButton,
+  .submitButton {
+    width: 100%;
+    padding: 0.75rem;
+  }
+}

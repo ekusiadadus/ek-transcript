@@ -3,6 +3,7 @@
 
 type Interview @aws_cognito_user_pools {
   interview_id: ID!
+  project_id: String
   segment: String!
   created_at: AWSDateTime!
   status: String
@@ -20,6 +21,35 @@ type Interview @aws_cognito_user_pools {
   progress: Int
   current_step: String
   error_message: String
+}
+
+# ========================================
+# Interview Project Types
+# ========================================
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+type InterviewProject @aws_cognito_user_pools {
+  project_id: ID!
+  user_id: String!
+  title: String!
+  description: String
+  recruitment_criteria: String
+  research_questions: String
+  target_persona: String
+  status: ProjectStatus!
+  interview_count: Int
+  created_at: AWSDateTime!
+  updated_at: AWSDateTime
+}
+
+type InterviewProjectConnection @aws_cognito_user_pools {
+  items: [InterviewProject!]!
+  nextToken: String
 }
 
 type InterviewConnection @aws_cognito_user_pools {
@@ -111,6 +141,30 @@ type Query {
   # 録画一覧取得（キャッシュから高速取得）
   listRecordings(status: RecordingStatus): RecordingsConnection
     @aws_cognito_user_pools
+
+  # ========================================
+  # Interview Project Queries
+  # ========================================
+
+  # 単一プロジェクト取得
+  getInterviewProject(project_id: ID!): InterviewProject
+    @aws_cognito_user_pools
+
+  # プロジェクト一覧取得（ページネーション対応）
+  listInterviewProjects(
+    limit: Int
+    nextToken: String
+    status: ProjectStatus
+  ): InterviewProjectConnection
+    @aws_cognito_user_pools
+
+  # プロジェクト内のインタビュー一覧取得
+  listInterviewsByProject(
+    project_id: ID!
+    limit: Int
+    nextToken: String
+  ): InterviewConnection
+    @aws_cognito_user_pools
 }
 
 type RecordingsConnection @aws_cognito_user_pools {
@@ -181,10 +235,27 @@ type Mutation {
   # Google アカウント接続解除
   disconnectGoogle: GoogleConnectionResult
     @aws_cognito_user_pools
+
+  # ========================================
+  # Interview Project Mutations
+  # ========================================
+
+  # プロジェクト作成
+  createInterviewProject(input: CreateInterviewProjectInput!): InterviewProject
+    @aws_cognito_user_pools
+
+  # プロジェクト更新
+  updateInterviewProject(input: UpdateInterviewProjectInput!): InterviewProject
+    @aws_cognito_user_pools
+
+  # プロジェクト削除
+  deleteInterviewProject(project_id: ID!): InterviewProject
+    @aws_cognito_user_pools
 }
 
 input CreateInterviewInput {
   interview_id: ID!
+  project_id: String
   segment: String!
   status: String
   analysis_key: String
@@ -198,8 +269,27 @@ input CreateInterviewInput {
   execution_arn: String
 }
 
+input CreateInterviewProjectInput {
+  title: String!
+  description: String
+  recruitment_criteria: String
+  research_questions: String
+  target_persona: String
+}
+
+input UpdateInterviewProjectInput {
+  project_id: ID!
+  title: String
+  description: String
+  recruitment_criteria: String
+  research_questions: String
+  target_persona: String
+  status: ProjectStatus
+}
+
 input UpdateInterviewInput {
   interview_id: ID!
+  project_id: String
   segment: String
   status: String
   analysis_key: String

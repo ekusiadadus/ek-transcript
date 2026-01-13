@@ -276,6 +276,70 @@ app/
 
 ---
 
+## Epic 5: Interview Project Management
+
+### US-13: Create Interview Project
+**As a** user
+**I want to** create an interview project before uploading videos
+**So that** I can define the purpose and context of the interviews
+
+**Acceptance Criteria:**
+- [ ] Create project with title and description
+- [ ] Define recruitment criteria (who was recruited)
+- [ ] Define research questions (hypotheses to test)
+- [ ] Define target persona (user attributes)
+- [ ] Project status (ACTIVE, COMPLETED, ARCHIVED)
+
+**Status:** 🚧 In Progress
+
+---
+
+### US-14: Project List View
+**As a** user
+**I want to** see all my interview projects in a list
+**So that** I can manage and organize my research
+
+**Acceptance Criteria:**
+- [ ] Display project cards with title, description
+- [ ] Show interview count per project
+- [ ] Show project status badge
+- [ ] Filter by status
+- [ ] Click to view project details
+
+**Status:** 🚧 In Progress
+
+---
+
+### US-15: Upload with Project Context
+**As a** user
+**I want to** select a project before uploading videos
+**So that** uploaded interviews are properly categorized
+
+**Acceptance Criteria:**
+- [ ] Project selection required before upload
+- [ ] Show selected project info on upload page
+- [ ] Link uploaded videos to selected project
+- [ ] Option to create new project from upload page
+
+**Status:** 🚧 In Progress
+
+---
+
+### US-16: Project Dashboard
+**As a** user
+**I want to** view all interviews within a project
+**So that** I can analyze patterns across related interviews
+
+**Acceptance Criteria:**
+- [ ] Project detail page with all interviews
+- [ ] Aggregate statistics (total interviews, average score)
+- [ ] Filter interviews within project
+- [ ] View recruitment criteria and research questions
+
+**Status:** 🚧 In Progress
+
+---
+
 ## Next Steps
 
 1. Create design system in globals.css

@@ -169,3 +169,49 @@ export const ANALYZE_RECORDING = /* GraphQL */ `
     }
   }
 `;
+
+// Interview Project mutations
+export const CREATE_INTERVIEW_PROJECT = /* GraphQL */ `
+  mutation CreateInterviewProject($input: CreateInterviewProjectInput!) {
+    createInterviewProject(input: $input) {
+      project_id
+      user_id
+      title
+      description
+      recruitment_criteria
+      research_questions
+      target_persona
+      status
+      interview_count
+      created_at
+      updated_at
+    }
+  }
+`;
+
+export const UPDATE_INTERVIEW_PROJECT = /* GraphQL */ `
+  mutation UpdateInterviewProject($input: UpdateInterviewProjectInput!) {
+    updateInterviewProject(input: $input) {
+      project_id
+      user_id
+      title
+      description
+      recruitment_criteria
+      research_questions
+      target_persona
+      status
+      interview_count
+      created_at
+      updated_at
+    }
+  }
+`;
+
+export const DELETE_INTERVIEW_PROJECT = /* GraphQL */ `
+  mutation DeleteInterviewProject($project_id: ID!) {
+    deleteInterviewProject(project_id: $project_id) {
+      project_id
+      title
+    }
+  }
+`;

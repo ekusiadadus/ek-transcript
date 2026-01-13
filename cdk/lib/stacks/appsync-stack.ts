@@ -12,6 +12,7 @@ export interface AppSyncStackProps extends cdk.StackProps {
   environment: string;
   userPool: cognito.IUserPool;
   interviewsTable: dynamodb.ITable;
+  interviewProjectsTable?: dynamodb.ITable;
   inputBucket: s3.IBucket;
   outputBucket: s3.IBucket;
   meetingsTable?: dynamodb.ITable;
@@ -26,7 +27,7 @@ export class AppSyncStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AppSyncStackProps) {
     super(scope, id, props);
 
-    const { environment, userPool, interviewsTable, inputBucket, outputBucket, meetingsTable, calendarSyncLambda, googleAuthLambda } = props;
+    const { environment, userPool, interviewsTable, interviewProjectsTable, inputBucket, outputBucket, meetingsTable, calendarSyncLambda, googleAuthLambda } = props;
 
     // Presigned URL Lambda (Upload)
     const presignedUrlLambda = new lambdaNodejs.NodejsFunction(
@@ -196,6 +197,79 @@ export class AppSyncStack extends cdk.Stack {
         path.join(resolversPath, "deleteInterview.js")
       ),
     });
+
+    // listInterviewsByProject resolver (query interviews table with project-index GSI)
+    new appsync.Resolver(this, "ListInterviewsByProjectResolver", {
+      api: this.graphqlApi,
+      typeName: "Query",
+      fieldName: "listInterviewsByProject",
+      dataSource: interviewsDataSource,
+      runtime: appsync.FunctionRuntime.JS_1_0_0,
+      code: appsync.Code.fromAsset(
+        path.join(resolversPath, "listInterviewsByProject.js")
+      ),
+    });
+
+    // ========================================
+    // Interview Project Resolvers
+    // ========================================
+    if (interviewProjectsTable) {
+      // Interview Projects DynamoDB Data Source
+      const interviewProjectsDataSource = this.graphqlApi.addDynamoDbDataSource(
+        "InterviewProjectsDataSource",
+        interviewProjectsTable
+      );
+
+      // getInterviewProject resolver
+      new appsync.Resolver(this, "GetInterviewProjectResolver", {
+        api: this.graphqlApi,
+        typeName: "Query",
+        fieldName: "getInterviewProject",
+        dataSource: interviewProjectsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "getInterviewProject.js")),
+      });
+
+      // listInterviewProjects resolver
+      new appsync.Resolver(this, "ListInterviewProjectsResolver", {
+        api: this.graphqlApi,
+        typeName: "Query",
+        fieldName: "listInterviewProjects",
+        dataSource: interviewProjectsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "listInterviewProjects.js")),
+      });
+
+      // createInterviewProject resolver
+      new appsync.Resolver(this, "CreateInterviewProjectResolver", {
+        api: this.graphqlApi,
+        typeName: "Mutation",
+        fieldName: "createInterviewProject",
+        dataSource: interviewProjectsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "createInterviewProject.js")),
+      });
+
+      // updateInterviewProject resolver
+      new appsync.Resolver(this, "UpdateInterviewProjectResolver", {
+        api: this.graphqlApi,
+        typeName: "Mutation",
+        fieldName: "updateInterviewProject",
+        dataSource: interviewProjectsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "updateInterviewProject.js")),
+      });
+
+      // deleteInterviewProject resolver
+      new appsync.Resolver(this, "DeleteInterviewProjectResolver", {
+        api: this.graphqlApi,
+        typeName: "Mutation",
+        fieldName: "deleteInterviewProject",
+        dataSource: interviewProjectsDataSource,
+        runtime: appsync.FunctionRuntime.JS_1_0_0,
+        code: appsync.Code.fromAsset(path.join(resolversPath, "deleteInterviewProject.js")),
+      });
+    }
 
     // getUploadUrl resolver (Lambda)
     new appsync.Resolver(this, "GetUploadUrlResolver", {
@@ -414,6 +488,12 @@ export class AppSyncStack extends cdk.Stack {
     new appsync.ChannelNamespace(this, "MeetingsNamespace", {
       api: this.eventsApi,
       channelNamespaceName: "meetings",
+    });
+
+    // Projects channel namespace for interview projects
+    new appsync.ChannelNamespace(this, "ProjectsNamespace", {
+      api: this.eventsApi,
+      channelNamespaceName: "projects",
     });
 
     // Outputs

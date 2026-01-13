@@ -18,6 +18,9 @@ export function request(ctx) {
   };
 
   // オプションフィールド
+  if (input.project_id) {
+    item.project_id = input.project_id;
+  }
   if (input.video_key) {
     item.video_key = input.video_key;
   }

@@ -42,13 +42,13 @@ function getJudgmentLabel(score: number | null | undefined): JudgmentLabel | nul
 function getPriorityClass(judgment: JudgmentLabel | null): string {
   switch (judgment) {
     case "最優先ターゲット":
-      return styles.priority;
+      return styles.priority ?? "";
     case "有望ターゲット":
-      return styles.promising;
+      return styles.promising ?? "";
     case "要検討":
-      return styles.review;
+      return styles.review ?? "";
     case "ターゲット外":
-      return styles.outside;
+      return styles.outside ?? "";
     default:
       return "";
   }
@@ -67,15 +67,15 @@ function isUserSegment(segment: string): segment is Segment {
 function getSegmentClass(segment: string): string {
   switch (segment) {
     case "A":
-      return styles.segmentA;
+      return styles.segmentA ?? "";
     case "B":
-      return styles.segmentB;
+      return styles.segmentB ?? "";
     case "C":
-      return styles.segmentC;
+      return styles.segmentC ?? "";
     case "D":
-      return styles.segmentD;
+      return styles.segmentD ?? "";
     default:
-      return styles.segmentProduct;
+      return styles.segmentProduct ?? "";
   }
 }
 
