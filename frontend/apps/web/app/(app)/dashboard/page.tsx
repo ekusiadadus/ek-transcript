@@ -1,140 +1,122 @@
 "use client";
 
 /**
- * Dashboard page - Interview list and overview (US-10, US-12)
+ * Dashboard page - Project-centric overview (US-10, US-12, US-PROJECT)
  *
- * Enhanced with rich interview cards showing:
- * - Total score and judgment label
- * - Segment classification with color coding
- * - Visual priority indicators
+ * Shows projects as the primary navigation with quick stats.
+ * Users can click on a project to see its interviews.
  */
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth-context";
-import { listInterviews, type Interview } from "../../../lib/graphql";
-import { InterviewCard } from "../../../components/InterviewCard";
-import { computeJudgmentLabel } from "../../../lib/analysis-compute";
-import type { Segment } from "../../../lib/graphql/types";
+import {
+  listInterviews,
+  listInterviewProjects,
+  type Interview,
+  type InterviewProject,
+} from "../../../lib/graphql";
 import styles from "./page.module.css";
 
-type FilterStatus = "ALL" | "COMPLETED" | "PROCESSING" | "PENDING" | "FAILED";
-type FilterSegment = "ALL" | "A" | "B" | "C" | "D";
+type FilterStatus = "ALL" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
 
-/**
- * Normalize status to uppercase for consistent comparison.
- */
-const normalizeStatus = (status: string | null | undefined): string => {
-  return status?.toUpperCase() ?? "PENDING";
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "進行中",
+  COMPLETED: "完了",
+  ARCHIVED: "アーカイブ",
 };
 
 /**
- * Get segment counts from interviews.
+ * Format date to Japanese locale.
  */
-function getSegmentCounts(interviews: Interview[]): Record<Segment, number> {
-  const counts: Record<Segment, number> = { A: 0, B: 0, C: 0, D: 0 };
-  interviews.forEach((i) => {
-    const seg = (i.segment as Segment) || "D";
-    if (seg in counts) {
-      counts[seg]++;
-    }
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
-  return counts;
 }
 
 /**
- * Get average score of completed interviews.
+ * Get status class for project card.
  */
-function getAverageScore(interviews: Interview[]): number | null {
-  const completed = interviews.filter(
-    (i) => normalizeStatus(i.status) === "COMPLETED" && i.total_score !== null
-  );
-  if (completed.length === 0) return null;
-  const sum = completed.reduce((acc, i) => acc + (i.total_score ?? 0), 0);
-  return Math.round(sum / completed.length);
-}
-
-/**
- * Get priority target count (score >= 25).
- */
-function getPriorityCount(interviews: Interview[]): number {
-  return interviews.filter(
-    (i) =>
-      normalizeStatus(i.status) === "COMPLETED" &&
-      i.total_score !== null &&
-      i.total_score !== undefined &&
-      i.total_score >= 25
-  ).length;
+function getStatusClass(status: string): string {
+  switch (status) {
+    case "COMPLETED":
+      return styles.projectCardStatusCompleted;
+    case "ARCHIVED":
+      return styles.projectCardStatusArchived;
+    default:
+      return "";
+  }
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [projects, setProjects] = useState<InterviewProject[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("ALL");
-  const [segmentFilter, setSegmentFilter] = useState<FilterSegment>("ALL");
 
   useEffect(() => {
     if (!isAuthenticated || authLoading) return;
 
-    const fetchInterviews = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const result = await listInterviews(50);
-        const sorted = [...result.items].sort(
+        const [projectsResult, interviewsResult] = await Promise.all([
+          listInterviewProjects(50),
+          listInterviews(50),
+        ]);
+
+        // Sort projects by updated_at descending
+        const sortedProjects = [...projectsResult.items].sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
-        setInterviews(sorted);
+        setProjects(sortedProjects);
+        setInterviews(interviewsResult.items);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load interviews");
+        setError(err instanceof Error ? err.message : "Failed to load data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInterviews();
+    fetchData();
   }, [isAuthenticated, authLoading]);
 
-  // Computed values
-  const completedInterviews = useMemo(
-    () => interviews.filter((i) => normalizeStatus(i.status) === "COMPLETED"),
-    [interviews]
-  );
+  // Computed stats
+  const stats = useMemo(() => {
+    const totalProjects = projects.length;
+    const activeProjects = projects.filter((p) => p.status === "ACTIVE").length;
+    const totalInterviews = interviews.length;
+    const completedInterviews = interviews.filter(
+      (i) => i.status?.toUpperCase() === "COMPLETED"
+    ).length;
 
-  const segmentCounts = useMemo(
-    () => getSegmentCounts(completedInterviews),
-    [completedInterviews]
-  );
+    return {
+      totalProjects,
+      activeProjects,
+      totalInterviews,
+      completedInterviews,
+    };
+  }, [projects, interviews]);
 
-  const averageScore = useMemo(
-    () => getAverageScore(interviews),
-    [interviews]
-  );
+  // Filtered projects
+  const filteredProjects = useMemo(() => {
+    if (statusFilter === "ALL") return projects;
+    return projects.filter((p) => p.status === statusFilter);
+  }, [projects, statusFilter]);
 
-  const priorityCount = useMemo(
-    () => getPriorityCount(interviews),
-    [interviews]
-  );
-
-  // Filtered interviews
-  const filteredInterviews = useMemo(() => {
-    let result = interviews;
-
-    // Status filter
-    if (statusFilter !== "ALL") {
-      result = result.filter((i) => normalizeStatus(i.status) === statusFilter);
-    }
-
-    // Segment filter (only for completed)
-    if (segmentFilter !== "ALL") {
-      result = result.filter((i) => i.segment === segmentFilter);
-    }
-
-    return result;
-  }, [interviews, statusFilter, segmentFilter]);
+  const filterOptions: { value: FilterStatus; label: string }[] = [
+    { value: "ALL", label: "すべて" },
+    { value: "ACTIVE", label: "進行中" },
+    { value: "COMPLETED", label: "完了" },
+    { value: "ARCHIVED", label: "アーカイブ" },
+  ];
 
   if (authLoading) {
     return (
@@ -152,7 +134,10 @@ export default function DashboardPage() {
           <p className={styles.authDescription}>
             ダッシュボードを表示するにはサインインしてください。
           </p>
-          <button onClick={() => router.push("/login")} className={styles.signInButton}>
+          <button
+            onClick={() => router.push("/login")}
+            className={styles.signInButton}
+          >
             サインイン
           </button>
         </div>
@@ -160,60 +145,50 @@ export default function DashboardPage() {
     );
   }
 
-  const statusFilterOptions: { value: FilterStatus; label: string }[] = [
-    { value: "ALL", label: "すべて" },
-    { value: "COMPLETED", label: "完了" },
-    { value: "PROCESSING", label: "処理中" },
-    { value: "PENDING", label: "待機中" },
-    { value: "FAILED", label: "失敗" },
-  ];
-
-  const segmentFilterOptions: { value: FilterSegment; label: string; count: number }[] = [
-    { value: "ALL", label: "全セグメント", count: completedInterviews.length },
-    { value: "A", label: "A: 省エネ意識高", count: segmentCounts.A },
-    { value: "B", label: "B: ガジェット好き", count: segmentCounts.B },
-    { value: "C", label: "C: 便利さ追求", count: segmentCounts.C },
-    { value: "D", label: "D: ライト層", count: segmentCounts.D },
-  ];
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>Dashboard</h1>
-        <Link href="/upload" className={styles.uploadButton}>
-          + アップロード
-        </Link>
       </div>
 
-      {/* Enhanced Stats */}
+      {/* Stats */}
       <div className={styles.stats}>
         <div className={styles.statCard}>
-          <span className={styles.statValue}>{interviews.length}</span>
+          <span className={styles.statValue}>{stats.totalProjects}</span>
+          <span className={styles.statLabel}>プロジェクト</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue}>{stats.activeProjects}</span>
+          <span className={styles.statLabel}>進行中</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue}>{stats.totalInterviews}</span>
           <span className={styles.statLabel}>総インタビュー</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statValue}>{completedInterviews.length}</span>
+          <span className={styles.statValue}>{stats.completedInterviews}</span>
           <span className={styles.statLabel}>分析完了</span>
-        </div>
-        <div className={`${styles.statCard} ${styles.statHighlight}`}>
-          <span className={styles.statValue}>{priorityCount}</span>
-          <span className={styles.statLabel}>最優先ターゲット</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue}>
-            {averageScore !== null ? averageScore : "-"}
-          </span>
-          <span className={styles.statLabel}>平均スコア</span>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Quick Actions */}
+      <div className={styles.quickActions}>
+        <Link href="/projects/new" className={`${styles.quickActionButton} ${styles.quickActionButtonPrimary}`}>
+          + 新規プロジェクト
+        </Link>
+      </div>
+
+      {/* Project Section */}
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>プロジェクト</h2>
+      </div>
+
+      {/* Filter */}
       <div className={styles.filterSection}>
-        {/* Status Filter */}
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>ステータス</span>
           <div className={styles.filters}>
-            {statusFilterOptions.map((option) => (
+            {filterOptions.map((option) => (
               <button
                 key={option.value}
                 className={`${styles.filterButton} ${
@@ -226,25 +201,6 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-
-        {/* Segment Filter */}
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>セグメント</span>
-          <div className={styles.filters}>
-            {segmentFilterOptions.map((option) => (
-              <button
-                key={option.value}
-                className={`${styles.filterButton} ${styles.segmentFilter} ${
-                  segmentFilter === option.value ? styles.filterButtonActive : ""
-                } ${option.value !== "ALL" ? styles[`segment${option.value}`] : ""}`}
-                onClick={() => setSegmentFilter(option.value)}
-              >
-                {option.label}
-                <span className={styles.filterCount}>({option.count})</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Content */}
@@ -252,24 +208,60 @@ export default function DashboardPage() {
         <div className={styles.loading}>読み込み中...</div>
       ) : error ? (
         <div className={styles.error}>{error}</div>
-      ) : filteredInterviews.length === 0 ? (
+      ) : filteredProjects.length === 0 && statusFilter === "ALL" ? (
         <div className={styles.empty}>
           <p className={styles.emptyText}>
-            {statusFilter === "ALL" && segmentFilter === "ALL"
-              ? "インタビューがありません。動画をアップロードして始めましょう。"
-              : "条件に一致するインタビューがありません。"}
+            プロジェクトがありません。新規プロジェクトを作成して始めましょう。
           </p>
-          {statusFilter === "ALL" && segmentFilter === "ALL" && (
-            <Link href="/upload" className={styles.uploadButtonSecondary}>
-              動画をアップロード
-            </Link>
-          )}
+          <Link href="/projects/new" className={styles.uploadButtonSecondary}>
+            プロジェクトを作成
+          </Link>
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className={styles.empty}>
+          <p className={styles.emptyText}>
+            条件に一致するプロジェクトがありません。
+          </p>
         </div>
       ) : (
-        <div className={styles.interviewGrid}>
-          {filteredInterviews.map((interview) => (
-            <InterviewCard key={interview.interview_id} interview={interview} />
+        <div className={styles.projectGrid}>
+          {filteredProjects.map((project) => (
+            <Link
+              key={project.project_id}
+              href={`/projects/${project.project_id}`}
+              className={styles.projectCard}
+            >
+              <div className={styles.projectCardHeader}>
+                <h3 className={styles.projectCardTitle}>{project.title}</h3>
+                <span
+                  className={`${styles.projectCardStatus} ${getStatusClass(
+                    project.status
+                  )}`}
+                >
+                  {STATUS_LABELS[project.status] || project.status}
+                </span>
+              </div>
+              <p className={styles.projectCardDescription}>
+                {project.description || "説明なし"}
+              </p>
+              <div className={styles.projectCardMeta}>
+                <span className={styles.projectCardCount}>
+                  <span className={styles.projectCardCountValue}>
+                    {project.interview_count}
+                  </span>
+                  件のインタビュー
+                </span>
+                <span className={styles.projectCardDate}>
+                  {formatDate(project.updated_at)}
+                </span>
+              </div>
+            </Link>
           ))}
+          {/* Create new project card */}
+          <Link href="/projects/new" className={styles.createProjectCard}>
+            <span className={styles.createProjectIcon}>+</span>
+            <span className={styles.createProjectText}>新規プロジェクト</span>
+          </Link>
         </div>
       )}
     </div>

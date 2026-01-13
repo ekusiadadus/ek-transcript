@@ -1,11 +1,12 @@
 /**
- * Dashboard Page Tests (US-10, US-12)
+ * Dashboard Page Tests (US-10, US-12, US-PROJECT)
  *
- * Tests for Interview List and Filtering.
+ * Tests for Project-centric Dashboard and Interview Filtering.
  *
  * Acceptance Criteria:
  * - US-10: Dashboard displays interview list
  * - US-12: Filter interviews by status
+ * - US-PROJECT: Dashboard shows projects as primary navigation
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -155,6 +156,107 @@ describe("Dashboard Status Handling", () => {
         "ANALYZING",
       ]);
       expect(count).toBe(3);
+    });
+  });
+});
+
+/**
+ * Project-centric Dashboard Tests
+ *
+ * Tests for the new project-based dashboard structure.
+ */
+describe("Dashboard Project-centric View", () => {
+  describe("Project list display logic", () => {
+    type InterviewProject = {
+      project_id: string;
+      title: string;
+      status: string;
+      interview_count: number;
+    };
+
+    const sortProjectsByRecent = (
+      projects: InterviewProject[]
+    ): InterviewProject[] => {
+      // In real implementation, would sort by updated_at
+      return [...projects];
+    };
+
+    const filterProjectsByStatus = (
+      projects: InterviewProject[],
+      status: string
+    ): InterviewProject[] => {
+      if (status === "ALL") return projects;
+      return projects.filter((p) => p.status === status);
+    };
+
+    const mockProjects: InterviewProject[] = [
+      { project_id: "1", title: "Project A", status: "ACTIVE", interview_count: 5 },
+      { project_id: "2", title: "Project B", status: "ACTIVE", interview_count: 3 },
+      { project_id: "3", title: "Project C", status: "COMPLETED", interview_count: 10 },
+      { project_id: "4", title: "Project D", status: "ARCHIVED", interview_count: 2 },
+    ];
+
+    it("should filter active projects", () => {
+      const result = filterProjectsByStatus(mockProjects, "ACTIVE");
+      expect(result).toHaveLength(2);
+      expect(result.map((p) => p.project_id)).toEqual(["1", "2"]);
+    });
+
+    it("should return all projects when filter is ALL", () => {
+      const result = filterProjectsByStatus(mockProjects, "ALL");
+      expect(result).toHaveLength(4);
+    });
+
+    it("should filter completed projects", () => {
+      const result = filterProjectsByStatus(mockProjects, "COMPLETED");
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe("Project C");
+    });
+  });
+
+  describe("Project statistics calculation", () => {
+    type InterviewProject = {
+      project_id: string;
+      interview_count: number;
+      status: string;
+    };
+
+    const getTotalInterviewCount = (projects: InterviewProject[]): number => {
+      return projects.reduce((sum, p) => sum + p.interview_count, 0);
+    };
+
+    const getActiveProjectCount = (projects: InterviewProject[]): number => {
+      return projects.filter((p) => p.status === "ACTIVE").length;
+    };
+
+    const mockProjects: InterviewProject[] = [
+      { project_id: "1", interview_count: 5, status: "ACTIVE" },
+      { project_id: "2", interview_count: 3, status: "ACTIVE" },
+      { project_id: "3", interview_count: 10, status: "COMPLETED" },
+    ];
+
+    it("should calculate total interview count across projects", () => {
+      const total = getTotalInterviewCount(mockProjects);
+      expect(total).toBe(18);
+    });
+
+    it("should count active projects", () => {
+      const count = getActiveProjectCount(mockProjects);
+      expect(count).toBe(2);
+    });
+  });
+
+  describe("Navigation flow", () => {
+    it("should generate correct project detail URL", () => {
+      const projectId = "abc-123";
+      const detailUrl = `/projects/${projectId}`;
+      expect(detailUrl).toBe("/projects/abc-123");
+    });
+
+    it("should generate correct upload URL with project", () => {
+      const projectId = "abc-123";
+      const uploadUrl = `/upload?project=${projectId}`;
+      expect(uploadUrl).toBe("/upload?project=abc-123");
     });
   });
 });

@@ -30,9 +30,6 @@ export default function Header() {
           <Link href="/dashboard" className={styles.navLink}>
             Dashboard
           </Link>
-          <Link href="/meetings" className={styles.navLink}>
-            Meetings
-          </Link>
           <Link href="/upload" className={styles.navLink}>
             Upload
           </Link>
