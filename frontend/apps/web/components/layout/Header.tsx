@@ -49,7 +49,7 @@ export default function Header() {
               </button>
             </>
           ) : (
-            <Link href="/dashboard" className={styles.signInButton}>
+            <Link href="/login" className={styles.signInButton}>
               Sign In
             </Link>
           )}

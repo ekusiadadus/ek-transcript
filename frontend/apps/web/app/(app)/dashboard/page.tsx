@@ -158,7 +158,7 @@ export default function DashboardPage() {
           <p className={styles.authDescription}>
             ダッシュボードを表示するにはサインインしてください。
           </p>
-          <button onClick={() => router.push("/")} className={styles.signInButton}>
+          <button onClick={() => router.push("/login")} className={styles.signInButton}>
             サインイン
           </button>
         </div>

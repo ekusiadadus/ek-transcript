@@ -224,7 +224,7 @@ export default function UploadPage() {
           <p className={styles.authDescription}>
             動画をアップロードするにはサインインしてください。
           </p>
-          <button onClick={() => router.push("/")} className={styles.signInButton}>
+          <button onClick={() => router.push("/login")} className={styles.signInButton}>
             サインイン
           </button>
         </div>
