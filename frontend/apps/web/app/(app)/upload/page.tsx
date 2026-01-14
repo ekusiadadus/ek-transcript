@@ -153,10 +153,12 @@ export default function UploadPage() {
         )
       );
 
-      // Get presigned URL
+      // Get presigned URL with project_id
       const { uploadUrl } = await getUploadUrl(
         uploadFile.file.name,
-        uploadFile.file.type
+        uploadFile.file.type,
+        undefined, // segment
+        selectedProject?.project_id // projectId
       );
 
       // Upload to S3

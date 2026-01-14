@@ -87,8 +87,8 @@ export const LIST_INTERVIEWS_BY_SEGMENT = /* GraphQL */ `
 `;
 
 export const GET_UPLOAD_URL = /* GraphQL */ `
-  query GetUploadUrl($fileName: String!, $contentType: String, $segment: String) {
-    getUploadUrl(fileName: $fileName, contentType: $contentType, segment: $segment) {
+  query GetUploadUrl($fileName: String!, $contentType: String, $segment: String, $projectId: ID) {
+    getUploadUrl(fileName: $fileName, contentType: $contentType, segment: $segment, projectId: $projectId) {
       uploadUrl
       key
       expiresIn

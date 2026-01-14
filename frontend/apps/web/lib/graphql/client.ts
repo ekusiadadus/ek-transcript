@@ -137,11 +137,12 @@ export async function deleteInterview(interviewId: string): Promise<Interview> {
 export async function getUploadUrl(
   fileName: string,
   contentType?: string,
-  segment?: string
+  segment?: string,
+  projectId?: string
 ): Promise<UploadUrlResponse> {
   const response = await client.graphql({
     query: GET_UPLOAD_URL,
-    variables: { fileName, contentType, segment },
+    variables: { fileName, contentType, segment, projectId },
   }) as GraphQLResult<GetUploadUrlResponse>;
   if (!response.data?.getUploadUrl) {
     throw new Error("Failed to get upload URL");

@@ -90,6 +90,7 @@ type Query {
     fileName: String!
     contentType: String
     segment: String
+    projectId: ID
   ): UploadUrlResponse
     @aws_cognito_user_pools
 

@@ -145,8 +145,9 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
     const interviewId = randomUUID();
     const createdAt = new Date().toISOString();
 
-    // Get original filename from DynamoDB upload metadata
+    // Get original filename and project_id from DynamoDB upload metadata
     let originalFileName = keyFileName;
+    let projectId: string | undefined;
     try {
       const uploadMetadataKey = `upload_${key}`;
       const getResponse = await docClient.send(new GetCommand({
@@ -155,7 +156,12 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
       }));
       if (getResponse.Item?.original_filename) {
         originalFileName = getResponse.Item.original_filename;
-        // Clean up the temporary upload metadata record
+      }
+      if (getResponse.Item?.project_id) {
+        projectId = getResponse.Item.project_id;
+      }
+      // Clean up the temporary upload metadata record
+      if (getResponse.Item) {
         await docClient.send(new DeleteCommand({
           TableName: tableName,
           Key: { interview_id: uploadMetadataKey },
@@ -177,6 +183,11 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
       upload_date: date,
       created_at: createdAt,
     };
+
+    // Add project_id if available
+    if (projectId) {
+      input.project_id = projectId;
+    }
 
     // Add meeting_id for recording files
     if (isRecording && meetingId) {
@@ -208,6 +219,11 @@ export async function handler(event: PipelineEvent): Promise<StartPipelineRespon
       created_at: createdAt,
       updated_at: createdAt,
     };
+
+    // Add project_id if available
+    if (projectId) {
+      interviewItem.project_id = projectId;
+    }
 
     // Add meeting_id for recording files
     if (isRecording && meetingId) {

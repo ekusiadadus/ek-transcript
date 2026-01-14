@@ -23,6 +23,7 @@ interface AppSyncEvent {
     fileName?: string;
     contentType?: string;
     segment?: string;
+    projectId?: string;
   };
   identity: {
     sub?: string;
@@ -53,6 +54,7 @@ export async function handler(event: AppSyncEvent): Promise<UploadUrlResponse> {
   const fileName = args.fileName;
   const contentType = args.contentType || "video/mp4";
   const segment = args.segment || "unknown";
+  const projectId = args.projectId || null;
 
   // Validate content type
   if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
@@ -90,17 +92,24 @@ export async function handler(event: AppSyncEvent): Promise<UploadUrlResponse> {
 
   // Save upload metadata to DynamoDB for later retrieval by start-pipeline
   // Using special prefix "upload_" to distinguish from interview records
+  const uploadMetadata: Record<string, unknown> = {
+    interview_id: `upload_${key}`,
+    segment: segment,
+    original_filename: fileName,
+    user_id: identity.sub,
+    s3_key: key,
+    created_at: new Date().toISOString(),
+    ttl: Math.floor(Date.now() / 1000) + 86400, // Expire in 24 hours
+  };
+
+  // Add project_id if provided
+  if (projectId) {
+    uploadMetadata.project_id = projectId;
+  }
+
   await docClient.send(new PutCommand({
     TableName: tableName,
-    Item: {
-      interview_id: `upload_${key}`,
-      segment: segment,
-      original_filename: fileName,
-      user_id: identity.sub,
-      s3_key: key,
-      created_at: new Date().toISOString(),
-      ttl: Math.floor(Date.now() / 1000) + 86400, // Expire in 24 hours
-    },
+    Item: uploadMetadata,
   }));
 
   return {
