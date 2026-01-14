@@ -49,7 +49,10 @@ export async function handler(event: AppSyncEvent): Promise<UploadUrlResponse> {
     throw new Error("fileName is required");
   }
 
-  const { fileName, contentType = "video/mp4", segment = "unknown" } = args;
+  // Handle null values explicitly (GraphQL may pass null instead of undefined)
+  const fileName = args.fileName;
+  const contentType = args.contentType || "video/mp4";
+  const segment = args.segment || "unknown";
 
   // Validate content type
   if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
