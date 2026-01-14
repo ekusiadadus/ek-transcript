@@ -221,10 +221,8 @@ export default function UploadPage() {
 
     setUploading(true);
 
-    // Upload files sequentially
-    for (const file of pendingFiles) {
-      await uploadFile(file);
-    }
+    // Upload files in parallel
+    await Promise.all(pendingFiles.map((file) => uploadFile(file)));
 
     setUploading(false);
 
